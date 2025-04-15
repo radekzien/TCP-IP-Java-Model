@@ -1,4 +1,6 @@
-public class Segment {
+import java.io.Serializable;
+
+public class Segment implements Serializable{
     String sourcePort;
     String destPort;
     int seqNum;

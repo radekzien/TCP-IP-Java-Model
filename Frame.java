@@ -1,4 +1,6 @@
-public class Frame {
+import java.io.Serializable;
+
+public class Frame implements Serializable{
     String srcMAC;
     String destMAC;
     Packet payload;

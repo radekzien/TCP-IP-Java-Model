@@ -1,0 +1,4 @@
+- Create a Faux ARP protocol which makes Client known to router upon reception.
+- Automate wrapping of messages
+- Ensure endpoints unwrap messages properly before reading them
+- Look at introducing threads
