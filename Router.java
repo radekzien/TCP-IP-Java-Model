@@ -78,10 +78,12 @@ public class Router implements Runnable {
     public void sendPacket(){
         Packet pac = outBuffer.get(0);
         String destIP = pac.destIP;
+        outBuffer.remove(0);
 
         ClientHandler handler = connectedClients.get(destIP);
         if(handler != null){
             handler.sendPacket(pac);
+            System.out.println("Router passed packet to " + destIP);
         } else {
             System.out.println("Destination with IP: " + destIP + " not connected");
         }
@@ -92,7 +94,7 @@ public class Router implements Runnable {
             while(!inBuffer.isEmpty()){
                 switchPacket();
             }
-        if(!outBuffer.isEmpty()){
+        while(!outBuffer.isEmpty()){
             sendPacket();
         }
     }

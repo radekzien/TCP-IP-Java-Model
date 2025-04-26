@@ -16,6 +16,9 @@ public class Client {
     Segment seg;
     Packet pac;
 
+    private Socket socket;
+    private ObjectOutputStream out;
+
     //Constructor
     public Client(String ip, String mac, String destIP, String routerHost, int routerPort){
         this.ip = ip;
@@ -23,7 +26,18 @@ public class Client {
         this.destIP = destIP;
         this.routerHost = routerHost;
         this.routerPort = routerPort;
-        sendIPtoRouter(routerHost, routerPort);
+        
+        try {
+            socket = new Socket(routerHost, routerPort);
+            out = new ObjectOutputStream(socket.getOutputStream());
+
+            out.writeObject(ip);
+            out.flush();
+
+            new Thread(new ResponseListener(socket)).start();;
+        } catch (IOException e){
+            System.out.println("Client " + ip + " failed to connect to router");
+        }
     }
 
     //Internal Methods - Creating messages, frames, packets etc
@@ -40,40 +54,23 @@ public class Client {
         pac = new Packet(ip, destIP, seg);
     }
 
-    //Networking methods
-    public void sendIPtoRouter(String routerHost, int routerPort){
-        try(Socket socket = new Socket(routerHost, routerPort);
-        
-        ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-        ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
-            out.writeObject(ip);
-            out.flush();
-        } catch (IOException e){
-            e.printStackTrace();
-            System.out.println("Failed to send IP to router");
-        }
-    }
-
     public void sendToRouter(){
-        try(Socket socket = new Socket(routerHost, routerPort);
-        
-        ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-        ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+        try{
             out.writeObject(pac);
+            out.flush();
             
-            //Process response
-            Object response = in.readObject();
-            if(response instanceof Packet){
-                Packet reply = (Packet) response;
-                System.out.println(reply.srcIP + ": " + reply.getPayload().getPayload());
-            }
-
-        } catch (IOException | ClassNotFoundException e){
+        } catch (IOException e){
             e.printStackTrace();
             System.out.println("Failed to communicate with router");
         }
-        
+    }
 
+    public void close() {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

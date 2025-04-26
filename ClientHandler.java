@@ -35,6 +35,7 @@ public class ClientHandler extends Thread {
 
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Client disconnected: " + clientIP);
+            e.printStackTrace();
         }
     }
 
