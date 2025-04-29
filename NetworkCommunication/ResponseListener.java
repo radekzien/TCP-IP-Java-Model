@@ -1,6 +1,9 @@
+package NetworkCommunication;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
+
+import NetworkDataUnits.Packet;
 
 public class ResponseListener extends Thread {
     private Socket socket;

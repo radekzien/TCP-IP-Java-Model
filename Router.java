@@ -1,22 +1,47 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
-public class Router implements Runnable {
-    private ServerSocket serverSocket;
-    private Map<String, ClientHandler> connectedClients = new HashMap<>();
+import NetworkCommunication.ClientHandler;
+import NetworkCommunication.PacketProcessor;
+import NetworkDataUnits.Packet;
+
+public class Router implements Runnable, PacketProcessor {
+    private ServerSocket serverSocket; //Server Socket
     
+    //Router information
     String ip;
     String mac;
-
-    ArrayList<Packet>inBuffer = new ArrayList<>();
-    ArrayList<Packet>outBuffer = new ArrayList<>();//Simplified for now
-
     private boolean running = false;
 
+    //Buffers and tables
+    private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
+    private final Queue<Packet> outBuffer = new ConcurrentLinkedQueue<>();
+    private final ConcurrentMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
+    //TODO: Add routing table when looking at introducing more complex multirouter networks
+
+    //Interface and Handler methods
+    @Override
+    public void onClientRegister(String ip, ClientHandler handler) {
+        connectedClients.put(ip, handler);
+        System.out.println("Registered client: " + ip);
+    }
+
+    @Override
+    public void onPacketReceived(Packet packet) {
+        inBuffer.offer(packet);
+        System.out.println("Packet received from: " + packet.srcIP);
+    }
+
+    @Override
+    public void onClientDisconnect(String ip) {
+        connectedClients.remove(ip);
+        System.out.println("Client disconnected: " + ip);
+    }
 
     //Socket and Running methods
     public void start(int port) throws IOException {
@@ -28,7 +53,7 @@ public class Router implements Runnable {
                 while (true) {
                     Socket clientSocket = serverSocket.accept();
                     ClientHandler handler = new ClientHandler(clientSocket, this);
-                    handler.start(); // Starts new thread for each client
+                    handler.start(); //Starts new thread for each client
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -56,29 +81,15 @@ public class Router implements Runnable {
         }
     }
 
-    //Client methods 
-    public void registerClient(String ip, ClientHandler handler) {
-        connectedClients.put(ip, handler);
-        System.out.println("Registered client with IP: " + ip);
-    }
-    
-    //Packet Methods
-    public void receivePacket(Packet pac){
-        inBuffer.add(pac);
-        System.out.println("Router received packet");
-    }
-
     public void switchPacket(){ //Checks will be added later
-        Packet pac = inBuffer.getFirst();
-        inBuffer.remove(0);
+        Packet pac = inBuffer.poll();
         outBuffer.add(pac);
         System.out.println("Router switched packet");
     }
 
     public void sendPacket(){
-        Packet pac = outBuffer.get(0);
+        Packet pac = outBuffer.poll();
         String destIP = pac.destIP;
-        outBuffer.remove(0);
 
         ClientHandler handler = connectedClients.get(destIP);
         if(handler != null){

@@ -1,3 +1,4 @@
+package NetworkDataUnits;
 import java.io.Serializable;
 
 public class Segment implements Serializable{

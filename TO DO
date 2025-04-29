@@ -16,13 +16,6 @@ Segment Integrity: The Segment class currently doesn't calculate or verify check
 
 
 --------REFACTORING PLAN--------
-1. Separation of Concerns
-The current code has a lot of responsibilities in individual classes, especially within Client, Router, and ClientHandler. Steps to making code more modular:
-
-Separate network communication (sockets, connections) from higher-level logic (packet creation, routing).
-
-Extract packet/segment/communication handling into separate classes to reduce complexity in Client, Router, and ClientHandler.
-
 2. Encapsulate Networking Logic
 Client and Router have mixed logic for networking and message handling. Extract the networking part (socket management, data transmission, etc.) into separate classes or methods.
 

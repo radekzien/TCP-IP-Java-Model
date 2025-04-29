@@ -1,8 +1,9 @@
+package NetworkDataUnits;
 import java.io.Serializable;
 
 public class Packet implements Serializable{
-    String srcIP;
-    String destIP;
+    public String srcIP;
+    public String destIP;
     Segment payload;
 
     public Packet(String src, String dest, Segment seg){

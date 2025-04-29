@@ -14,13 +14,9 @@ public class NetworkSim {
         Client clientB = new Client("2.2.2.2", "EE:FF:GG:11", "1.1.1.1","localhost", 12345);
 
         clientA.createMessage("I am talking to you over a network!");
-        clientA.createSegment();
-        clientA.createPacket();
         clientA.sendToRouter();
 
         clientB.createMessage("I am also talking to you!");
-        clientB.createSegment();
-        clientB.createPacket();
         clientB.sendToRouter();
 
         

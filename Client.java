@@ -1,6 +1,11 @@
 import java.io.*;
 import java.net.Socket;
 
+import NetworkCommunication.ResponseListener;
+import NetworkDataUnits.DataUnitHandler;
+import NetworkDataUnits.Packet;
+import NetworkDataUnits.Segment;
+
 public class Client {
     String ip;
     String mac;
@@ -42,16 +47,10 @@ public class Client {
 
     //Internal Methods - Creating messages, frames, packets etc
     public void createMessage(String msg){
+        DataUnitHandler duh = new DataUnitHandler();
         this.message = msg;
-    }
-
-    public void createSegment(){
-        seg = new Segment(ip, destIP);
-        seg.addPayload(message);
-    }
-
-    public void createPacket(){
-        pac = new Packet(ip, destIP, seg);
+        seg = duh.createSegment(ip, destIP, msg);
+        pac = duh.createPacket(ip, destIP, seg);
     }
 
     public void sendToRouter(){
