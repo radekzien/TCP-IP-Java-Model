@@ -23,6 +23,7 @@ public class Client {
 
     private Socket socket;
     private ObjectOutputStream out;
+    private ResponseListener listener;
 
     //Constructor
     public Client(String ip, String mac, String destIP, String routerHost, int routerPort){
@@ -32,14 +33,15 @@ public class Client {
         this.routerHost = routerHost;
         this.routerPort = routerPort;
         
-        try {
+        try {//Register with router upon instantiation
             socket = new Socket(routerHost, routerPort);
             out = new ObjectOutputStream(socket.getOutputStream());
 
             out.writeObject(ip);
             out.flush();
 
-            new Thread(new ResponseListener(socket)).start();;
+            listener = new ResponseListener(socket);
+            listener.start();
         } catch (IOException e){
             System.out.println("Client " + ip + " failed to connect to router");
         }
@@ -54,6 +56,10 @@ public class Client {
     }
 
     public void sendToRouter(){
+        if (socket == null || socket.isClosed()) {
+            System.out.println("Cannot send: socket is closed");
+            return;
+        }
         try{
             out.writeObject(pac);
             out.flush();
@@ -66,6 +72,9 @@ public class Client {
 
     public void close() {
         try {
+            if(listener != null){
+                listener.shutdown();
+            }
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();

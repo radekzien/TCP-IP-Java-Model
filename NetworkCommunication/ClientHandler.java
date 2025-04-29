@@ -40,6 +40,7 @@ public class ClientHandler extends Thread {
         if (ipObj instanceof String ip) {
             clientIP = ip;
             processor.onClientRegister(clientIP, this);
+            connected = true;
         } else {
             throw new IOException("Invalid client IP received.");
         }
