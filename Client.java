@@ -1,6 +1,11 @@
 import java.io.*;
 import java.net.Socket;
 
+import NetworkCommunication.ResponseListener;
+import NetworkDataUnits.DataUnitHandler;
+import NetworkDataUnits.Packet;
+import NetworkDataUnits.Segment;
+
 public class Client {
     String ip;
     String mac;
@@ -16,6 +21,10 @@ public class Client {
     Segment seg;
     Packet pac;
 
+    private Socket socket;
+    private ObjectOutputStream out;
+    private ResponseListener listener;
+
     //Constructor
     public Client(String ip, String mac, String destIP, String routerHost, int routerPort){
         this.ip = ip;
@@ -23,57 +32,53 @@ public class Client {
         this.destIP = destIP;
         this.routerHost = routerHost;
         this.routerPort = routerPort;
-        sendIPtoRouter(routerHost, routerPort);
+        
+        try {//Register with router upon instantiation
+            socket = new Socket(routerHost, routerPort);
+            out = new ObjectOutputStream(socket.getOutputStream());
+
+            out.writeObject(ip);
+            out.flush();
+
+            listener = new ResponseListener(socket);
+            listener.start();
+        } catch (IOException e){
+            System.out.println("Client " + ip + " failed to connect to router");
+        }
     }
 
     //Internal Methods - Creating messages, frames, packets etc
     public void createMessage(String msg){
+        DataUnitHandler duh = new DataUnitHandler();
         this.message = msg;
-    }
-
-    public void createSegment(){
-        seg = new Segment(ip, destIP);
-        seg.addPayload(message);
-    }
-
-    public void createPacket(){
-        pac = new Packet(ip, destIP, seg);
-    }
-
-    //Networking methods
-    public void sendIPtoRouter(String routerHost, int routerPort){
-        try(Socket socket = new Socket(routerHost, routerPort);
-        
-        ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-        ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
-            out.writeObject(ip);
-            out.flush();
-        } catch (IOException e){
-            e.printStackTrace();
-            System.out.println("Failed to send IP to router");
-        }
+        seg = duh.createSegment(ip, destIP, msg);
+        pac = duh.createPacket(ip, destIP, seg);
     }
 
     public void sendToRouter(){
-        try(Socket socket = new Socket(routerHost, routerPort);
-        
-        ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-        ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+        if (socket == null || socket.isClosed()) {
+            System.out.println("Cannot send: socket is closed");
+            return;
+        }
+        try{
             out.writeObject(pac);
+            out.flush();
             
-            //Process response
-            Object response = in.readObject();
-            if(response instanceof Packet){
-                Packet reply = (Packet) response;
-                System.out.println(reply.srcIP + ": " + reply.getPayload().getPayload());
-            }
-
-        } catch (IOException | ClassNotFoundException e){
+        } catch (IOException e){
             e.printStackTrace();
             System.out.println("Failed to communicate with router");
         }
-        
+    }
 
+    public void close() {
+        try {
+            if(listener != null){
+                listener.shutdown();
+            }
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

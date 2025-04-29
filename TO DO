@@ -1,4 +1,31 @@
+- Refactor current code
 - Create a Faux ARP protocol which makes Client known to router upon reception.
 - Automate wrapping of messages
 - Ensure endpoints unwrap messages properly before reading them
-- Look at introducing threads
+- Look at implementing protocols
+
+
+Points for Improvement:
+Error Handling: Some areas like socket handling and packet transmission might be improved with more robust error handling and logging.
+
+Packet Processing: The packet switching mechanism in the router is simplistic and could be expanded to handle more complex routing decisions (e.g., routing tables, dynamic IP address assignments).
+
+Client Disconnection: The client disconnection handling in ClientHandler could be improved by properly managing the socket resources and notifying the router when a client disconnects.
+
+Segment Integrity: The Segment class currently doesn't calculate or verify checksums, which could be added for packet integrity validation.
+
+
+--------REFACTORING PLAN--------
+2. Encapsulate Networking Logic
+Client and Router have mixed logic for networking and message handling. Extract the networking part (socket management, data transmission, etc.) into separate classes or methods.
+
+3. Improve Threading Logic
+Threading is used in several places (ResponseListener, ClientHandler, Router). Abstract the thread management into a utility class (avoids repetitive thread management code).
+
+Refactored Version Plan:
+Network Communication Layer - Create a separate class for handling network communication (e.g., NetworkManager) that will handle socket connections, reading, and writing.
+
+Packet Processing Layer - Have a separate class for managing Packet processing (e.g., PacketProcessor or MessageHandler).
+
+Separate Data Handling and Routing Logic - Refactor the Router to focus only on routing, and separate message parsing/processing into a different class.
+
