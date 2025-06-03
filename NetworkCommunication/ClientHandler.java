@@ -3,6 +3,7 @@ import java.io.*;
 import java.net.Socket;
 
 import NetworkDataUnits.Packet;
+import NetworkDataUnits.Segment;
 
 public class ClientHandler extends Thread {
     private Socket socket;
@@ -21,7 +22,6 @@ public class ClientHandler extends Thread {
     public void run() {
         try {
             initializeConnection();
-            registerClient();
             handleIncomingPackets();
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("ClientHandler error for " + clientIP + ": " + e.getMessage());
@@ -32,31 +32,39 @@ public class ClientHandler extends Thread {
 
     private void initializeConnection() throws IOException {
         out = new ObjectOutputStream(socket.getOutputStream());
+        out.flush();
         in = new ObjectInputStream(socket.getInputStream());
+        connected = true;
     }
 
-    private void registerClient() throws IOException, ClassNotFoundException {
-        Object ipObj = in.readObject();
-        if (ipObj instanceof String ip) {
+    private void registerClient(String ip, String hostName){
             clientIP = ip;
-            processor.onClientRegister(clientIP, this);
+            processor.onClientRegister(clientIP, this, hostName);
             connected = true;
-        } else {
-            throw new IOException("Invalid client IP received.");
-        }
     }
 
     private void handleIncomingPackets() throws IOException, ClassNotFoundException {
         while (connected && !socket.isClosed()) {
             Object obj = in.readObject();
             if (obj instanceof Packet packet) {
-                processor.onPacketReceived(packet);
+                if("DHCP".equals(packet.protocol)){
+                    Segment clientSegment = packet.getPayload();
+                    String clientIP = packet.srcIP;
+                    Object segmentPayload = clientSegment.getPayload();
+                    if(segmentPayload instanceof String){
+                        String clientHostName = (String) segmentPayload;
+                        registerClient(clientIP, clientHostName);
+                    }
+                } else { 
+                    processor.onPacketReceived(packet);
+                }
             }
         }
     }
 
     public void sendPacket(Packet pac) {
         try {
+            out.flush();
             out.writeObject(pac);
             out.flush();
         } catch (IOException e) {

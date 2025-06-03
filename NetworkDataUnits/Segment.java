@@ -7,18 +7,18 @@ public class Segment implements Serializable{
     int seqNum;
     int ackNum;
     int checksum;
-    String payload;
+    Object payload;
 
     public Segment(String ip, String destIP){
         this.sourcePort = ip;
         this.destPort = destIP;
     }
 
-    public void addPayload(String message){
-        this.payload = message;
+    public void addPayload(Object payload){
+        this.payload = payload;
     }
 
-    public String getPayload(){
+    public Object getPayload(){
         return(payload);
     }
 }

@@ -4,38 +4,56 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
 
+import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
+import NetworkDataUnits.Segment;
 
 public class ResponseListener extends Thread {
     private Socket socket;
     private ObjectInputStream in;
     private boolean running = true;
+    private ClientCallback callback;
 
-    public ResponseListener(Socket socket){
+    public ResponseListener(Socket socket, ClientCallback callback){
         this.socket = socket;
+        this.callback = callback;
+        try {
+            this.in = new ObjectInputStream(socket.getInputStream());
+        } catch (IOException e) {
+            System.out.println("Failed to initialize input stream");
+            e.printStackTrace();
+        }
     }
     @Override
-    public void run(){
+    public void run() {
         try {
-            in = new ObjectInputStream(socket.getInputStream());
-            while(running && !socket.isClosed()){
-                try{
+            while (running && !socket.isClosed()) {
+                try {
                     Object response = in.readObject();
 
-                if(response instanceof Packet){
-                    Packet responseMessage = (Packet) response;
-                    System.out.println(responseMessage.srcIP + ": " + responseMessage.getPayload().getPayload());
-                }
+                    if (response instanceof Packet packet) {
+                        if("BCAST".equals(packet.protocol)){
+                            Segment resSeg = packet.getPayload();
+                            Object payload = resSeg.getPayload();
+
+                            if(payload instanceof ClientListPayload clientList){
+                                callback.onClientListUpdated(clientList.getClientList());
+                            }
+                        } else {
+                        System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
+                        }
+                    }
                 } catch (EOFException e) {
                     System.out.println("Connection closed by router");
                     break;
                 }
-                
             }
         } catch (IOException | ClassNotFoundException e) {
+            if (running) {
                 e.printStackTrace();
                 System.out.println("Failed to receive message from router");
-            }  
+            }
+        }
     }
     public void shutdown(){
         try {
