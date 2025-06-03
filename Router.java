@@ -24,13 +24,14 @@ public class Router implements Runnable, PacketProcessor {
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<Packet> outBuffer = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
-    public List<String> ClientList = new ArrayList<>();
+     private final ConcurrentMap<String, String> clientList = new ConcurrentHashMap<>();
     //TODO: Add routing table when looking at introducing more complex multirouter networks
 
     //Interface and Handler methods
     @Override
-    public void onClientRegister(String ip, ClientHandler handler) {
+    public void onClientRegister(String ip, ClientHandler handler, String hostName) {
         connectedClients.put(ip, handler);
+        clientList.put(ip, hostName);
         System.out.println("Registered client: " + ip);
     }
 
@@ -55,6 +56,7 @@ public class Router implements Runnable, PacketProcessor {
             try {
                 while (true) {
                     Socket clientSocket = serverSocket.accept();
+                     System.out.println("Router accepted connection from " + clientSocket.getInetAddress());
                     ClientHandler handler = new ClientHandler(clientSocket, this);
                     handler.start(); //Starts new thread for each client
                 }

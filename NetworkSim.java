@@ -5,19 +5,19 @@ public class NetworkSim {
         //Start router
         Router router = new Router();
         try {
-            router.start(12345);
+            router.start(23456);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        Client clientA = new Client("A-Client", "1.1.1.1", "AA:BB:CC:00", "2.2.2.2", "localhost", 12345);
-        Client clientB = new Client("B-Client", "2.2.2.2", "EE:FF:GG:11", "1.1.1.1","localhost", 12345);
+        Client clientA = new Client("A-Client", "1.1.1.1", "AA:BB:CC:00", "2.2.2.2", "localhost", 23456);
+        Client clientB = new Client("B-Client", "2.2.2.2", "EE:FF:GG:11", "1.1.1.1","localhost", 23456);
 
-        clientA.createMessage("I am talking to you over a network!");
-        clientA.sendToRouter();
+        //clientA.createTCPMessage("I am talking to you over a network!");
+        //clientA.sendToRouter();
 
-        clientB.createMessage("I am also talking to you!");
-        clientB.sendToRouter();
+       // clientB.createTCPMessage("I am also talking to you!");
+        //clientB.sendToRouter();
 
         
     }
