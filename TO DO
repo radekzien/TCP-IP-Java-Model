@@ -1,15 +1,2 @@
-- Create Advertisement packet and finish Client and router logic for advertising hostnames
-- Create a way for Clients to request host names, and resolve IP addresses for a given name
-- Automate wrapping of messages
-- Ensure endpoints unwrap messages properly before reading them
+- Implement Address allocation for dynamic connections and disconnections
 - Look at implementing protocols
-
-
-Points for Improvement:
-Error Handling: Some areas like socket handling and packet transmission might be improved with more robust error handling and logging.
-
-Packet Processing: The packet switching mechanism in the router is simplistic and could be expanded to handle more complex routing decisions (e.g., routing tables, dynamic IP address assignments).
-
-Client Disconnection: The client disconnection handling in ClientHandler could be improved by properly managing the socket resources and notifying the router when a client disconnects.
-
-Segment Integrity: The Segment class currently doesn't calculate or verify checksums, which could be added for packet integrity validation.
