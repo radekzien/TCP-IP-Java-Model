@@ -1,8 +1,7 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -10,7 +9,9 @@ import java.util.concurrent.ConcurrentMap;
 
 import NetworkCommunication.ClientHandler;
 import NetworkCommunication.PacketProcessor;
+import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
+import NetworkDataUnits.Segment;
 
 public class Router implements Runnable, PacketProcessor {
     private ServerSocket serverSocket; //Server Socket
@@ -24,8 +25,7 @@ public class Router implements Runnable, PacketProcessor {
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<Packet> outBuffer = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
-     private final ConcurrentMap<String, String> clientList = new ConcurrentHashMap<>();
-    //TODO: Add routing table when looking at introducing more complex multirouter networks
+    public ConcurrentMap<String, String> clientList = new ConcurrentHashMap<>();
 
     //Interface and Handler methods
     @Override
@@ -33,18 +33,35 @@ public class Router implements Runnable, PacketProcessor {
         connectedClients.put(ip, handler);
         clientList.put(ip, hostName);
         System.out.println("Registered client: " + ip);
+        broadcastConnectionsList();
     }
 
     @Override
     public void onPacketReceived(Packet packet) {
-        inBuffer.offer(packet);
         System.out.println("Packet received from: " + packet.srcIP);
+        inBuffer.offer(packet);
     }
 
     @Override
     public void onClientDisconnect(String ip) {
         connectedClients.remove(ip);
+        clientList.remove(ip);
         System.out.println("Client disconnected: " + ip);
+        broadcastConnectionsList();
+    }
+
+    public void broadcastConnectionsList(){
+    for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
+        String ip = entry.getKey();
+        ClientHandler handler = entry.getValue();
+        
+        Segment listSeg = new Segment("ROUTER", ip);
+        listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
+        Packet packet = new Packet("ROUTER", ip, "BCAST", listSeg);
+
+        handler.sendPacket(packet);
+    }
+        
     }
 
     //Socket and Running methods
@@ -56,7 +73,6 @@ public class Router implements Runnable, PacketProcessor {
             try {
                 while (true) {
                     Socket clientSocket = serverSocket.accept();
-                     System.out.println("Router accepted connection from " + clientSocket.getInetAddress());
                     ClientHandler handler = new ClientHandler(clientSocket, this);
                     handler.start(); //Starts new thread for each client
                 }
@@ -88,8 +104,10 @@ public class Router implements Runnable, PacketProcessor {
 
     public void switchPacket(){ //Checks will be added later
         Packet pac = inBuffer.poll();
-        outBuffer.add(pac);
-        System.out.println("Router switched packet");
+        if("TCP".equals(pac.protocol)){
+            outBuffer.add(pac);
+            System.out.println("Router switched packet");
+        }
     }
 
     public void sendPacket(){

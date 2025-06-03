@@ -47,13 +47,16 @@ public class ClientHandler extends Thread {
         while (connected && !socket.isClosed()) {
             Object obj = in.readObject();
             if (obj instanceof Packet packet) {
-                if(packet.protocol.equals("DHCP")){
+                if("DHCP".equals(packet.protocol)){
                     Segment clientSegment = packet.getPayload();
                     String clientIP = packet.srcIP;
-                    String clientHostName = clientSegment.getPayload();
-                    registerClient(clientIP, clientHostName);
+                    Object segmentPayload = clientSegment.getPayload();
+                    if(segmentPayload instanceof String){
+                        String clientHostName = (String) segmentPayload;
+                        registerClient(clientIP, clientHostName);
+                    }
                 } else { 
-                processor.onPacketReceived(packet);
+                    processor.onPacketReceived(packet);
                 }
             }
         }
@@ -61,6 +64,7 @@ public class ClientHandler extends Thread {
 
     public void sendPacket(Packet pac) {
         try {
+            out.flush();
             out.writeObject(pac);
             out.flush();
         } catch (IOException e) {
