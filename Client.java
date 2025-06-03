@@ -7,6 +7,7 @@ import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
 
 public class Client {
+    String hostName;
     String ip;
     String mac;
 
@@ -26,7 +27,8 @@ public class Client {
     private ResponseListener listener;
 
     //Constructor
-    public Client(String ip, String mac, String destIP, String routerHost, int routerPort){
+    public Client(String hostName, String ip, String mac, String destIP, String routerHost, int routerPort){
+        this.hostName = hostName;
         this.ip = ip;
         this.mac = mac;
         this.destIP = destIP;
@@ -52,7 +54,7 @@ public class Client {
         DataUnitHandler duh = new DataUnitHandler();
         this.message = msg;
         seg = duh.createSegment(ip, destIP, msg);
-        pac = duh.createPacket(ip, destIP, seg);
+        pac = duh.createPacket(ip, "TCP", destIP, seg);
     }
 
     public void sendToRouter(){
