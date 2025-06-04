@@ -11,7 +11,7 @@ import NetworkDataUnits.Segment;
 
 public class Client  implements ClientCallback{
     String hostName;
-    String ip;
+    String ip = "0.0.0.0";
     String mac;
 
     String destIP; //Hardcoded for now
@@ -25,6 +25,8 @@ public class Client  implements ClientCallback{
     Segment seg;
     Packet pac;
 
+    String routerIP = "";
+
     private Socket socket;
     private ObjectOutputStream out;
     private ResponseListener listener;
@@ -32,9 +34,8 @@ public class Client  implements ClientCallback{
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
     //Constructor
-    public Client (String hostName, String ip, String mac, String destIP, String routerHost, int routerPort){
+    public Client (String hostName, String mac, String destIP, String routerHost, int routerPort){
         this.hostName = hostName;
-        this.ip = ip;
         this.mac = mac;
         this.destIP = destIP;
         this.routerHost = routerHost;
@@ -48,8 +49,8 @@ public class Client  implements ClientCallback{
             listener = new ResponseListener(socket, this);
             listener.start();
 
-            seg = duh.createSegment(ip, null, hostName);
-            pac = duh.createPacket(ip, null, "DHCP", seg);
+            seg = duh.createSegment(ip, "255.255.255.255", hostName);
+            pac = duh.createPacket(ip, "255.255.255.255", "DHCP", seg);
 
             out.writeObject(pac);
             out.flush();
@@ -89,6 +90,16 @@ public class Client  implements ClientCallback{
         connectionList.forEach((ip, name) ->
             System.out.println(" - " + ip + " (" + name + ")")
         );
+    }
+    @Override
+    public void processDHCP(Packet packet){
+        Segment seg = packet.getPayload();
+        Object payload = seg.getPayload();
+        routerIP = packet.srcIP;
+        if(payload instanceof String){
+            ip = (String) payload;
+        }
+
     }
 
     public void close() {

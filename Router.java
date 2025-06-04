@@ -21,11 +21,19 @@ public class Router implements Runnable, PacketProcessor {
     String mac;
     private boolean running = false;
 
+    //Constructor
+    public Router(String ip, String mac) {
+    this.ip = ip;
+    this.mac = mac;
+    createAddresses();
+}
+
     //Buffers and tables
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<Packet> outBuffer = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
     public ConcurrentMap<String, String> clientList = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, String> addressSpace =  new ConcurrentHashMap<>();
 
     //Interface and Handler methods
     @Override
@@ -52,12 +60,12 @@ public class Router implements Runnable, PacketProcessor {
 
     public void broadcastConnectionsList(){
     for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
-        String ip = entry.getKey();
+        String CLIENT_IP = entry.getKey();
         ClientHandler handler = entry.getValue();
         
-        Segment listSeg = new Segment("ROUTER", ip);
+        Segment listSeg = new Segment(ip, CLIENT_IP);
         listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
-        Packet packet = new Packet("ROUTER", ip, "BCAST", listSeg);
+        Packet packet = new Packet(ip, CLIENT_IP, "BCAST", listSeg);
 
         handler.sendPacket(packet);
     }
@@ -132,4 +140,57 @@ public class Router implements Runnable, PacketProcessor {
             sendPacket();
         }
     }
+
+    public void createAddresses(){
+        addressSpace.put("192.168.1.2", "");
+        addressSpace.put("192.168.1.3", "");
+        addressSpace.put("192.168.1.4", "");
+        addressSpace.put("192.168.1.5", "");
+    }
+
+    public String allocateAddress(){
+        for (Map.Entry<String, String> entry : addressSpace.entrySet()) {
+        if ("".equals(entry.getValue())) {
+            addressSpace.put(entry.getKey(), "RESERVED");
+            return entry.getKey();
+        }
+    }
+        return null; // Or throw an exception, or return Optional<String>
+    }   
+
+    public String getRouterIP(){
+        return ip;
+    }
+
+    public void handleDHCP(Packet packet, ClientHandler handler){
+        Segment clientSegment = packet.getPayload();
+        String clientOldIP = packet.srcIP;
+        String clientNewIP = allocateAddress();
+        System.out.println(clientNewIP);
+          if (clientNewIP == null) {
+            System.out.println("No IPs left in address space.");
+            return;
+        }
+        
+        Object segmentPayload = clientSegment.getPayload();
+        if(segmentPayload instanceof String){
+            String clientHostName = (String) segmentPayload;
+            addressSpace.put(clientNewIP, clientHostName);
+
+            if (handler != null) {
+                connectedClients.remove(clientOldIP);
+                onClientRegister(clientNewIP, handler, clientHostName);
+            } else {
+                System.out.println("Handler not found for DHCP request from " + clientOldIP);
+            }
+
+
+            Segment returnSeg = new Segment(ip, clientNewIP);
+            returnSeg.addPayload(clientNewIP);
+            Packet returnPac = new Packet(ip, clientOldIP, "DHCP-ACK", returnSeg);
+            handler.sendPacket(returnPac);
+        }
+    }
 }
+
+

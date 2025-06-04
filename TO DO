@@ -1,2 +1,3 @@
-- Implement Address allocation for dynamic connections and disconnections
+- Prepare to refactor to introduce RMI
+    - Users should give hostnames to clients on start
 - Look at implementing protocols
