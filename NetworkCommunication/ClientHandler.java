@@ -48,13 +48,8 @@ public class ClientHandler extends Thread {
             Object obj = in.readObject();
             if (obj instanceof Packet packet) {
                 if("DHCP".equals(packet.protocol)){
-                    Segment clientSegment = packet.getPayload();
-                    String clientIP = packet.srcIP;
-                    Object segmentPayload = clientSegment.getPayload();
-                    if(segmentPayload instanceof String){
-                        String clientHostName = (String) segmentPayload;
-                        registerClient(clientIP, clientHostName);
-                    }
+                    processor.handleDHCP(packet);
+                    
                 } else { 
                     processor.onPacketReceived(packet);
                 }

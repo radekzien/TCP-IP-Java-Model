@@ -21,11 +21,18 @@ public class Router implements Runnable, PacketProcessor {
     String mac;
     private boolean running = false;
 
+    //Constructor
+    public Router(String ip, String mac) {
+    this.ip = ip;
+    this.mac = mac;
+}
+
     //Buffers and tables
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<Packet> outBuffer = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
     public ConcurrentMap<String, String> clientList = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, String> addressSpace =  new ConcurrentHashMap<>();
 
     //Interface and Handler methods
     @Override
@@ -52,12 +59,12 @@ public class Router implements Runnable, PacketProcessor {
 
     public void broadcastConnectionsList(){
     for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
-        String ip = entry.getKey();
+        String CLIENT_IP = entry.getKey();
         ClientHandler handler = entry.getValue();
         
-        Segment listSeg = new Segment("ROUTER", ip);
+        Segment listSeg = new Segment(ip, CLIENT_IP);
         listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
-        Packet packet = new Packet("ROUTER", ip, "BCAST", listSeg);
+        Packet packet = new Packet(ip, CLIENT_IP, "BCAST", listSeg);
 
         handler.sendPacket(packet);
     }
@@ -132,4 +139,41 @@ public class Router implements Runnable, PacketProcessor {
             sendPacket();
         }
     }
+
+    public void createAddresses(){
+        addressSpace.put("192.168.1.2", "");
+        addressSpace.put("192.168.1.3", "");
+        addressSpace.put("192.168.1.4", "");
+        addressSpace.put("192.168.1.5", "");
+    }
+
+    public String allocateAddress(){
+        for (Map.Entry<String, String> entry : addressSpace.entrySet()) {
+        if ("".equals(entry.getValue())) {
+            return entry.getKey();
+        }
+    }
+        return null; // Or throw an exception, or return Optional<String>
+    }   
+
+    public String getRouterIP(){
+        return ip;
+    }
+
+    public void handleDHCP(Packet packet){
+        Segment clientSegment = packet.getPayload();
+        String clientOldIP = packet.srcIP;
+        String clientNewIP = allocateAddress();
+        Object segmentPayload = clientSegment.getPayload();
+        if(segmentPayload instanceof String){
+            String clientHostName = (String) segmentPayload;
+            registerClient(clientNewIP, clientHostName);
+            Segment returnSeg = new Segment(clientNewIP, clientHostName);
+            Object returnPayload = getRouterIP();
+            returnSeg.addPayload(returnPayload);
+            Packet returnPac = new Packet(clientHostName, clientOldIP, "DHCP-ACK", returnSeg);
+        }
+    }
 }
+
+
