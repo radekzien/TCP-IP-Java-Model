@@ -185,10 +185,9 @@ public class Router implements Runnable, PacketProcessor {
             }
 
 
-            Segment returnSeg = new Segment(clientNewIP, clientHostName);
-            Object returnPayload = getRouterIP();
-            returnSeg.addPayload(returnPayload);
-            Packet returnPac = new Packet(clientHostName, clientOldIP, "DHCP-ACK", returnSeg);
+            Segment returnSeg = new Segment(ip, clientNewIP);
+            returnSeg.addPayload(clientNewIP);
+            Packet returnPac = new Packet(ip, clientOldIP, "DHCP-ACK", returnSeg);
             handler.sendPacket(returnPac);
         }
     }

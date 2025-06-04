@@ -39,6 +39,8 @@ public class ResponseListener extends Thread {
                             if(payload instanceof ClientListPayload clientList){
                                 callback.onClientListUpdated(clientList.getClientList());
                             }
+                        } else if("DHCP-ACK".equals(packet.protocol)){
+                            callback.processDHCP(packet);
                         } else {
                         System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
                         }

@@ -91,6 +91,16 @@ public class Client  implements ClientCallback{
             System.out.println(" - " + ip + " (" + name + ")")
         );
     }
+    @Override
+    public void processDHCP(Packet packet){
+        Segment seg = packet.getPayload();
+        Object payload = seg.getPayload();
+        routerIP = packet.srcIP;
+        if(payload instanceof String){
+            ip = (String) payload;
+        }
+
+    }
 
     public void close() {
         try {
