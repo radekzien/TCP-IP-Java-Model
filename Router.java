@@ -25,6 +25,7 @@ public class Router implements Runnable, PacketProcessor {
     public Router(String ip, String mac) {
     this.ip = ip;
     this.mac = mac;
+    createAddresses();
 }
 
     //Buffers and tables
@@ -150,6 +151,7 @@ public class Router implements Runnable, PacketProcessor {
     public String allocateAddress(){
         for (Map.Entry<String, String> entry : addressSpace.entrySet()) {
         if ("".equals(entry.getValue())) {
+            addressSpace.put(entry.getKey(), "RESERVED");
             return entry.getKey();
         }
     }
@@ -160,18 +162,34 @@ public class Router implements Runnable, PacketProcessor {
         return ip;
     }
 
-    public void handleDHCP(Packet packet){
+    public void handleDHCP(Packet packet, ClientHandler handler){
         Segment clientSegment = packet.getPayload();
         String clientOldIP = packet.srcIP;
         String clientNewIP = allocateAddress();
+        System.out.println(clientNewIP);
+          if (clientNewIP == null) {
+            System.out.println("No IPs left in address space.");
+            return;
+        }
+        
         Object segmentPayload = clientSegment.getPayload();
         if(segmentPayload instanceof String){
             String clientHostName = (String) segmentPayload;
-            registerClient(clientNewIP, clientHostName);
+            addressSpace.put(clientNewIP, clientHostName);
+
+            if (handler != null) {
+                connectedClients.remove(clientOldIP);
+                onClientRegister(clientNewIP, handler, clientHostName);
+            } else {
+                System.out.println("Handler not found for DHCP request from " + clientOldIP);
+            }
+
+
             Segment returnSeg = new Segment(clientNewIP, clientHostName);
             Object returnPayload = getRouterIP();
             returnSeg.addPayload(returnPayload);
             Packet returnPac = new Packet(clientHostName, clientOldIP, "DHCP-ACK", returnSeg);
+            handler.sendPacket(returnPac);
         }
     }
 }

@@ -8,5 +8,5 @@ public interface PacketProcessor {
     void onClientDisconnect(String ip);
     String allocateAddress();
     String getRouterIP();
-    void handleDHCP(Packet packet);
+    void handleDHCP(Packet packet, ClientHandler clientHandler);
 }

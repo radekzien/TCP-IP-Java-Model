@@ -48,7 +48,7 @@ public class ClientHandler extends Thread {
             Object obj = in.readObject();
             if (obj instanceof Packet packet) {
                 if("DHCP".equals(packet.protocol)){
-                    processor.handleDHCP(packet);
+                    processor.handleDHCP(packet, this);
                     
                 } else { 
                     processor.onPacketReceived(packet);
