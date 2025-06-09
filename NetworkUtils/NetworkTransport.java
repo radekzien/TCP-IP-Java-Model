@@ -9,7 +9,4 @@ public interface NetworkTransport {
     void start() throws IOException;
     void stop() throws IOException;
     void setPacketListener(PacketListener listener);
-    interface PacketListener {
-        void onPacketReceived(Packet packet);
-    }
 }

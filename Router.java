@@ -1,6 +1,4 @@
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,30 +10,35 @@ import NetworkCommunication.PacketProcessor;
 import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import NetworkUtils.NetworkTransport;
+import NetworkUtils.PacketListener;
+import NetworkUtils.SocketServerTransport;
 
-public class Router implements Runnable, PacketProcessor {
-    private ServerSocket serverSocket; //Server Socket
-    
-    //Router information
-    String ip;
+
+public class Router implements Runnable, PacketProcessor, PacketListener {
+//----- VARIABLES -----
+    private NetworkTransport transport;
+
+    //----- ROUTER INFO -----
+    String ip = "192.168.1.1";
     String mac;
     private boolean running = false;
+    private int port = 12345;
 
-    //Constructor
-    public Router(String ip, String mac) {
-    this.ip = ip;
-    this.mac = mac;
-    createAddresses();
-}
-
-    //Buffers and tables
+    //----- BUFFERS AND TABLES -----
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
     private final Queue<Packet> outBuffer = new ConcurrentLinkedQueue<>();
     private final ConcurrentMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
     public ConcurrentMap<String, String> clientList = new ConcurrentHashMap<>();
     private ConcurrentMap<String, String> addressSpace =  new ConcurrentHashMap<>();
 
-    //Interface and Handler methods
+//----- MAIN -----
+    public static void main(String[] args) throws IOException {
+        Router router = new Router();
+        router.start();
+    }
+
+//----- INTERFACES AND HANDLERS -----
     @Override
     public void onClientRegister(String ip, ClientHandler handler, String hostName) {
         connectedClients.put(ip, handler);
@@ -72,30 +75,23 @@ public class Router implements Runnable, PacketProcessor {
         
     }
 
-    //Socket and Running methods
-    public void start(int port) throws IOException {
-        serverSocket = new ServerSocket(port);
-        System.out.println("Router running on port: " + port);
-    
-        new Thread(() -> {
-            try {
-                while (true) {
-                    Socket clientSocket = serverSocket.accept();
-                    ClientHandler handler = new ClientHandler(clientSocket, this);
-                    handler.start(); //Starts new thread for each client
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }).start();
-    
-        running = true;
-        Thread thread = new Thread(this);
-        thread.start();
+//----- RUNNING METHODS -----
+    public void start() throws IOException {
+        transport = new SocketServerTransport(port, this);
+        createAddresses();
+        try{
+            transport.start();
+            System.out.println("Router running on port: " + port);
+            running = true;
+            Thread.currentThread().join();
+        } catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
-    public void stop() {
+    public void stop() throws IOException{
         running = false;
+        transport.stop();
     }
 
     @Override
@@ -112,23 +108,15 @@ public class Router implements Runnable, PacketProcessor {
 
     public void switchPacket(){ //Checks will be added later
         Packet pac = inBuffer.poll();
-        if("TCP".equals(pac.protocol)){
+        if(pac != null && "TCP".equals(pac.protocol)){
             outBuffer.add(pac);
             System.out.println("Router switched packet");
         }
     }
 
-    public void sendPacket(){
+    public void sendPacket() throws IOException{
         Packet pac = outBuffer.poll();
-        String destIP = pac.destIP;
-
-        ClientHandler handler = connectedClients.get(destIP);
-        if(handler != null){
-            handler.sendPacket(pac);
-            System.out.println("Router passed packet to " + destIP);
-        } else {
-            System.out.println("Destination with IP: " + destIP + " not connected");
-        }
+        transport.sendPacket(pac);
     }
 
     public void processBuffers(){
@@ -137,10 +125,15 @@ public class Router implements Runnable, PacketProcessor {
                 switchPacket();
             }
         while(!outBuffer.isEmpty()){
-            sendPacket();
+            try {
+                sendPacket();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
+//----- ADDRESS ALLOCATION AND DHCP -----
     public void createAddresses(){
         addressSpace.put("192.168.1.2", "");
         addressSpace.put("192.168.1.3", "");
