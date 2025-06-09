@@ -10,6 +10,7 @@ import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
 
 public class Client  implements ClientCallback{
+//----- VARIABLES -----
     String hostName;
     String ip = "0.0.0.0";
     String mac;
@@ -33,6 +34,7 @@ public class Client  implements ClientCallback{
     private DataUnitHandler duh = new DataUnitHandler();
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
+//----- MAIN -----
     public static void main(String[] args) {
         if(args.length < 4){
             System.out.println("Usage: java Client <hostName> <mac> <routerHost> [routerPort]");
@@ -49,7 +51,7 @@ public class Client  implements ClientCallback{
         //TODO: Client Logic; Destination selection, Messaging Handling
     }
 
-    //Constructor
+//----- CONSTRUCTOR -----
     public Client (String hostName, String mac, String destIP, String routerHost, int routerPort){
         this.hostName = hostName;
         this.mac = mac;
@@ -76,7 +78,7 @@ public class Client  implements ClientCallback{
         }
     }
 
-    //Internal Methods - Creating messages, frames, packets etc
+// ----- MESSAGING AND MESSAGE HANDLING -----
     public void createTCPMessage(String msg){
         this.message = msg;
         seg = duh.createSegment(ip, destIP, msg);
@@ -98,16 +100,7 @@ public class Client  implements ClientCallback{
         }
     }
 
-    @Override
-    public void onClientListUpdated(ConcurrentMap<String, String> newList) {
-        connectionList.clear();
-        connectionList.putAll(newList);
-        System.out.println(hostName + " updated connection list:");
-        connectionList.forEach((ip, name) ->
-            System.out.println(" - " + ip + " (" + name + ")")
-        );
-    }
-    @Override
+        @Override
     public void processDHCP(Packet packet){
         Segment seg = packet.getPayload();
         Object payload = seg.getPayload();
@@ -117,6 +110,18 @@ public class Client  implements ClientCallback{
         }
 
     }
+
+//----- CLIENT SYSTEM -----
+    @Override
+    public void onClientListUpdated(ConcurrentMap<String, String> newList) {
+        connectionList.clear();
+        connectionList.putAll(newList);
+        System.out.println(hostName + " updated connection list:");
+        connectionList.forEach((ip, name) ->
+            System.out.println(" - " + ip + " (" + name + ")")
+        );
+    }
+
 
     public void close() {
         try {
