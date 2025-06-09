@@ -19,7 +19,7 @@ public class Client  implements ClientCallback{
 
     String message;
 
-    String routerHost;//Hardcoded for now
+    String routerHost;
     int routerPort;
 
     Segment seg;
@@ -32,6 +32,22 @@ public class Client  implements ClientCallback{
     private ResponseListener listener;
     private DataUnitHandler duh = new DataUnitHandler();
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
+
+    public static void main(String[] args) {
+        if(args.length < 4){
+            System.out.println("Usage: java Client <hostName> <mac> <routerHost> [routerPort]");
+            return;
+        }
+
+        String hostName = args[0];
+        String mac = args[1];
+        String routerHost = args[2];
+        int routerPort = 12345;
+
+        Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
+
+        //TODO: Client Logic; Destination selection, Messaging Handling
+    }
 
     //Constructor
     public Client (String hostName, String mac, String destIP, String routerHost, int routerPort){
