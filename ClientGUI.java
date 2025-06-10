@@ -1,57 +1,174 @@
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
-import javax.swing.Action;
-import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+
 
 public class ClientGUI extends JFrame{
     private Client client;
+
+//----- CHAT PANEL COMPNENTS -----
     private JTextArea chat;
     private JTextField inputField;
     private JButton sendButton;
+    private JButton backButton;
+    private String currentChatIP;
+
+//----- GUI ARCHITECTURE COMPONENTS -----
+    private JPanel cards;
+    private static final String CLIENT_LIST = "ClientList";
+    private static final String CHAT_PANEL = "ChatPanel";
+
+// ----- CLIENT LIST COMPONENTS -----
+    private JList<String> clientJList;
+    private DefaultListModel<String> clientListModel;
 
     public ClientGUI(Client client) {
         this.client = client;
 
         setTitle(client.hostName + " [" + client.ip + "]");
         setSize(400, 300);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-
-        chat = new JTextArea();
-        chat.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(chat);
-        add(scrollPane);
-
-        inputField = new JTextField();
-        add(inputField);
-
-        sendButton = new JButton("Send");
-        add(sendButton);
-
-        sendButton.addActionListener(new ActionListener() {
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
             @Override
-            public void actionPerformed(ActionEvent e){
-                String message = inputField.getText();
-                if(!message.isEmpty()){
-                    client.createTCPMessage(message); //Maybe Make the send into one method?
-                    client.sendToRouter();
-                    chat.append("Me: " + message + "\n");
-                    inputField.setText("");
+            public void windowClosing(WindowEvent e) {
+                closeConnection();
+            }
+        });
+        setLocationRelativeTo(null);
+
+        cards = new JPanel(new CardLayout());
+
+        initClientListPanel();
+        initChatPanel();
+        updateClientList(client.getConnectionList());
+
+        add(cards);
+
+        setVisible(true);
+    }
+
+    private void closeConnection(){
+        client.close();
+        dispose();
+        System.exit(0);
+    }
+
+    private void initClientListPanel(){
+        JPanel panel = new JPanel(new BorderLayout());
+
+        clientListModel = new DefaultListModel<>();
+
+        clientJList = new JList<>(clientListModel);
+
+        clientJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JScrollPane scrollPane = new JScrollPane(clientJList);
+
+        JButton openChatButton = new JButton("Open Chat");
+
+        openChatButton.addActionListener(e -> {
+            String selected = clientJList.getSelectedValue();
+            if(selected != null){
+                String ip = selected.split(" ")[1];
+
+                openChat(ip);
+            }
+        });
+
+        panel.add(new JLabel("Connected Clients: "), BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(openChatButton, BorderLayout.SOUTH);
+
+        cards.add(panel, CLIENT_LIST);
+    }
+
+    private void initChatPanel(){
+        JPanel panel = new JPanel(new BorderLayout());
+
+        chat = (new JTextArea());
+        chat.setEditable(false);
+
+        JScrollPane chatScroll = new JScrollPane(chat);
+
+        JPanel bottom = new JPanel(new BorderLayout());
+        inputField = new JTextField();
+        sendButton = new JButton("Send");
+        backButton = new JButton("Back");
+
+        sendButton.addActionListener(e -> sendMessage());
+        backButton.addActionListener(e -> showClientList());
+
+        bottom.add(inputField, BorderLayout.CENTER);
+        bottom.add(sendButton, BorderLayout.EAST);
+        bottom.add(backButton, BorderLayout.WEST);
+
+        panel.add(chatScroll, BorderLayout.CENTER);
+        panel.add(bottom, BorderLayout.SOUTH);
+
+        cards.add(panel, CHAT_PANEL);
+    }
+
+    private void openChat(String ip){
+        currentChatIP = ip;
+        chat.setText(""); //Change this to load history
+        setTitle("Chat with " + ip); //Change to hostname
+
+        CardLayout cl = (CardLayout) (cards.getLayout());
+        cl.show(cards, CHAT_PANEL);
+    }
+
+    private void showClientList(){
+        updateClientList(client.getConnectionList());
+        setTitle("Client: " + client.hostName + " [" + client.ip + "]");
+        CardLayout cl = (CardLayout) (cards.getLayout());
+        cl.show(cards, CLIENT_LIST);
+    }
+
+    private void sendMessage(){
+        String msg = inputField.getText().trim();
+
+        if(msg.isEmpty()){
+            return;
+        }
+
+        client.createTCPMessage(msg);
+        client.pac.destIP = currentChatIP;
+        client.sendToRouter();
+
+        chat.append("Me: " + msg + "\n");
+        inputField.setText("");
+    }
+
+    public void updateClientList(ConcurrentMap<String, String> connectionList){
+        SwingUtilities.invokeLater(() -> {
+            clientListModel.clear();
+            for(Map.Entry<String, String> entry : connectionList.entrySet()){
+                if(!entry.getKey().equals(client.ip)){
+                    clientListModel.addElement(entry.getValue() + " [" + entry.getKey() + "]");
                 }
             }
         });
-        
-        setVisible(true);
-    
     }
-
-    public void displayMessage(String sender, String msg){
-        chat.append(sender + ": " + msg + "\n");
+    public void receiveMessage(String senderIP, String msg){
+        if(senderIP.equals(currentChatIP)){
+            SwingUtilities.invokeLater(() -> {
+                chat.append(senderIP + ": " + msg + "\n");
+            });
+        }
     }
 }
