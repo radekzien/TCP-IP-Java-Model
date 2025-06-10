@@ -3,6 +3,8 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.swing.SwingUtilities;
+
 import NetworkCommunication.ClientCallback;
 import NetworkCommunication.ResponseListener;
 import NetworkDataUnits.DataUnitHandler;
@@ -107,6 +109,7 @@ public class Client  implements ClientCallback{
         routerIP = packet.srcIP;
         if(payload instanceof String){
             ip = (String) payload;
+            SwingUtilities.invokeLater(() -> new ClientGUI(this));
         }
 
     }
