@@ -40,14 +40,14 @@ public class Client  implements ClientCallback{
 
 //----- MAIN -----
     public static void main(String[] args) {
-        if(args.length < 4){
-            System.out.println("Usage: java Client <hostName> <mac> <routerHost> [routerPort]");
+        if(args.length != 2){
+            System.out.println("Usage: java Client <hostName> <mac>");
             return;
         }
 
         String hostName = args[0];
         String mac = args[1];
-        String routerHost = args[2];
+        String routerHost = "0.0.0.0";
         int routerPort = 12345;
 
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
