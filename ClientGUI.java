@@ -84,7 +84,7 @@ public class ClientGUI extends JFrame{
         openChatButton.addActionListener(e -> {
             String selected = clientJList.getSelectedValue();
             if(selected != null){
-                String ip = selected.split(" ")[1];
+                String ip = selected.split(" ")[1].replaceAll(".*\\[|\\].*", "");;
 
                 openChat(ip);
             }

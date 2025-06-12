@@ -16,13 +16,14 @@ public class SocketServerTransport implements NetworkTransport{
     private PacketProcessor processor;
     private volatile Boolean running = false;
     
-    private ConcurrentMap<String, ClientHandler> clients = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, ClientHandler> clients;
 
     private int port;
 
-    public SocketServerTransport(int port, PacketProcessor processor){
+    public SocketServerTransport(int port, PacketProcessor processor, ConcurrentMap<String, ClientHandler> clients){
         this.port = port;
         this.processor = processor;
+        this.clients = clients;
     }
 
     @Override
@@ -36,6 +37,8 @@ public class SocketServerTransport implements NetworkTransport{
                     ClientHandler handler = new ClientHandler(socket, processor);
 
                     handler.start();
+                    String clientIP = "TEMP"; // Should get from packet
+                    clients.put(clientIP, handler);
                 }
             } catch (IOException e){
                 e.printStackTrace();

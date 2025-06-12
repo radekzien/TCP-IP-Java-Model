@@ -32,6 +32,7 @@ public class ResponseListener extends Thread {
                     Object response = in.readObject();
 
                     if (response instanceof Packet packet) {
+                        System.out.println(packet.protocol + " packet received from " + packet.srcIP);
                         if("BCAST".equals(packet.protocol)){
                             Segment resSeg = packet.getPayload();
                             Object payload = resSeg.getPayload();
