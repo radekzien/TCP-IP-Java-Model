@@ -84,9 +84,10 @@ public class ClientGUI extends JFrame{
         openChatButton.addActionListener(e -> {
             String selected = clientJList.getSelectedValue();
             if(selected != null){
-                String ip = selected.split(" ")[1].replaceAll(".*\\[|\\].*", "");;
+                String ip = selected.split(" ")[1].replaceAll(".*\\[|\\].*", "");
+                String hostName = selected.split(" ")[0];
 
-                openChat(ip);
+                openChat(ip, hostName);
             }
         });
 
@@ -123,10 +124,11 @@ public class ClientGUI extends JFrame{
         cards.add(panel, CHAT_PANEL);
     }
 
-    private void openChat(String ip){
+    private void openChat(String ip, String hostName){
         currentChatIP = ip;
+        String currentHostName = hostName;
         chat.setText(""); //Change this to load history
-        setTitle("Chat with " + ip); //Change to hostname
+        setTitle("Chat with " + currentHostName); //Change to hostname
 
         CardLayout cl = (CardLayout) (cards.getLayout());
         cl.show(cards, CHAT_PANEL);
@@ -166,8 +168,9 @@ public class ClientGUI extends JFrame{
     }
     public void receiveMessage(String senderIP, String msg){
         if(senderIP.equals(currentChatIP)){
+            String hostName = client.getConnectionList().getOrDefault(senderIP, senderIP);
             SwingUtilities.invokeLater(() -> {
-                chat.append(senderIP + ": " + msg + "\n");
+                chat.append(hostName + ": " + msg + "\n");
             });
         }
     }
