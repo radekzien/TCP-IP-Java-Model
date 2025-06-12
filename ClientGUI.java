@@ -3,6 +3,7 @@ import java.awt.CardLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.swing.DefaultListModel;
@@ -36,6 +37,9 @@ public class ClientGUI extends JFrame{
 // ----- CLIENT LIST COMPONENTS -----
     private JList<String> clientJList;
     private DefaultListModel<String> clientListModel;
+
+// ----- CHAT HISTORY COMPONENTS -----
+    private final Map<String, StringBuilder> chatHistories = new ConcurrentHashMap<>();
 
     public ClientGUI(Client client) {
         this.client = client;
@@ -127,8 +131,11 @@ public class ClientGUI extends JFrame{
     private void openChat(String ip, String hostName){
         currentChatIP = ip;
         String currentHostName = hostName;
-        chat.setText(""); //Change this to load history
-        setTitle("Chat with " + currentHostName); //Change to hostname
+            StringBuilder history = chatHistories.get(ip);
+            if (history != null) {
+                chat.setText(history.toString());
+            }
+        setTitle("Chat with " + currentHostName);
 
         CardLayout cl = (CardLayout) (cards.getLayout());
         cl.show(cards, CHAT_PANEL);
@@ -143,10 +150,15 @@ public class ClientGUI extends JFrame{
 
     private void sendMessage(){
         String msg = inputField.getText().trim();
+        String hostName = client.getConnectionList().getOrDefault(currentChatIP, currentChatIP);
 
         if(msg.isEmpty()){
             return;
         }
+
+         chatHistories
+            .computeIfAbsent(hostName, k -> new StringBuilder())
+            .append("Me: ").append(msg).append("\n");
 
         client.createTCPMessage(msg);
         client.pac.destIP = currentChatIP;
@@ -169,9 +181,19 @@ public class ClientGUI extends JFrame{
     public void receiveMessage(String senderIP, String msg){
         if(senderIP.equals(currentChatIP)){
             String hostName = client.getConnectionList().getOrDefault(senderIP, senderIP);
+
+            chatHistories
+                .computeIfAbsent(hostName, k -> new StringBuilder())
+                .append(hostName).append(": ").append(msg).append("\n");
+
             SwingUtilities.invokeLater(() -> {
                 chat.append(hostName + ": " + msg + "\n");
             });
+        } else {
+            chatHistories
+                .computeIfAbsent(senderIP, k -> new StringBuilder())
+                .append(client.getConnectionList().getOrDefault(senderIP, senderIP))
+                .append(": ").append(msg).append("\n");
         }
     }
 }
