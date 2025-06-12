@@ -3,6 +3,8 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.swing.SwingUtilities;
+
 import NetworkCommunication.ClientCallback;
 import NetworkCommunication.ResponseListener;
 import NetworkDataUnits.DataUnitHandler;
@@ -34,6 +36,8 @@ public class Client  implements ClientCallback{
     private DataUnitHandler duh = new DataUnitHandler();
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
+    ClientGUI clientGUI;
+
 //----- MAIN -----
     public static void main(String[] args) {
         if(args.length < 4){
@@ -47,8 +51,6 @@ public class Client  implements ClientCallback{
         int routerPort = 12345;
 
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
-
-        //TODO: Client Logic; Destination selection, Messaging Handling
     }
 
 //----- CONSTRUCTOR -----
@@ -82,7 +84,9 @@ public class Client  implements ClientCallback{
     public void createTCPMessage(String msg){
         this.message = msg;
         seg = duh.createSegment(ip, destIP, msg);
-        pac = duh.createPacket(ip, "TCP", destIP, seg);
+        pac = duh.createPacket(ip, destIP, "TCP", seg);
+
+        System.out.println("Created Packet: \nSender IP: " + ip + "\n" + "Destination IP: " + destIP + "\n" +"Protocol: " + pac.protocol + "Segment Payload: " + seg.getPayload());
     }
 
     public void sendToRouter(){
@@ -92,7 +96,9 @@ public class Client  implements ClientCallback{
         }
         try{
             out.writeObject(pac);
+             System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
             out.flush();
+           
             
         } catch (IOException e){
             e.printStackTrace();
@@ -107,8 +113,18 @@ public class Client  implements ClientCallback{
         routerIP = packet.srcIP;
         if(payload instanceof String){
             ip = (String) payload;
+            SwingUtilities.invokeLater(() -> clientGUI = new ClientGUI(this));
         }
 
+    }
+
+    @Override
+    public void sendToApp(String ip, Object message){
+        if(message instanceof String){
+            clientGUI.receiveMessage(ip, (String) message);
+        } else {
+            return; //Handle this somehow
+        }
     }
 
 //----- CLIENT SYSTEM -----
@@ -119,7 +135,15 @@ public class Client  implements ClientCallback{
         System.out.println(hostName + " updated connection list:");
         connectionList.forEach((ip, name) ->
             System.out.println(" - " + ip + " (" + name + ")")
+            
         );
+        if(clientGUI != null){
+            clientGUI.updateClientList(newList);
+        }
+    }
+
+    public ConcurrentMap<String, String> getConnectionList(){
+        return(connectionList);
     }
 
 

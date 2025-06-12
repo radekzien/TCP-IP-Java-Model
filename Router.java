@@ -10,14 +10,13 @@ import NetworkCommunication.PacketProcessor;
 import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
-import NetworkUtils.NetworkTransport;
 import NetworkUtils.PacketListener;
 import NetworkUtils.SocketServerTransport;
 
 
 public class Router implements Runnable, PacketProcessor, PacketListener {
 //----- VARIABLES -----
-    private NetworkTransport transport;
+    private SocketServerTransport transport;
 
     //----- ROUTER INFO -----
     String ip = "192.168.1.1";
@@ -77,13 +76,13 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
 //----- RUNNING METHODS -----
     public void start() throws IOException {
-        transport = new SocketServerTransport(port, this);
+        transport = new SocketServerTransport(port, this, connectedClients);
         createAddresses();
         try{
             transport.start();
             System.out.println("Router running on port: " + port);
             running = true;
-            Thread.currentThread().join();
+            new Thread(this).start();
         } catch(Exception e){
             e.printStackTrace();
         }
@@ -110,13 +109,14 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         Packet pac = inBuffer.poll();
         if(pac != null && "TCP".equals(pac.protocol)){
             outBuffer.add(pac);
-            System.out.println("Router switched packet");
+            System.out.println("Router switched packet from " + pac.srcIP + " to " + pac.destIP);
         }
     }
 
     public void sendPacket() throws IOException{
         Packet pac = outBuffer.poll();
         transport.sendPacket(pac);
+        System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
     }
 
     public void processBuffers(){

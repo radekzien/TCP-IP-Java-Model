@@ -32,6 +32,7 @@ public class ResponseListener extends Thread {
                     Object response = in.readObject();
 
                     if (response instanceof Packet packet) {
+                        System.out.println(packet.protocol + " packet received from " + packet.srcIP);
                         if("BCAST".equals(packet.protocol)){
                             Segment resSeg = packet.getPayload();
                             Object payload = resSeg.getPayload();
@@ -43,6 +44,7 @@ public class ResponseListener extends Thread {
                             callback.processDHCP(packet);
                         } else {
                         System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
+                        callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
                         }
                     }
                 } catch (EOFException e) {
