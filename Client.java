@@ -118,6 +118,15 @@ public class Client  implements ClientCallback{
 
     }
 
+    @Override
+    public void sendToApp(String ip, Object message){
+        if(message instanceof String){
+            clientGUI.receiveMessage(ip, (String) message);
+        } else {
+            return; //Handle this somehow
+        }
+    }
+
 //----- CLIENT SYSTEM -----
     @Override
     public void onClientListUpdated(ConcurrentMap<String, String> newList) {

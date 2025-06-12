@@ -44,6 +44,7 @@ public class ResponseListener extends Thread {
                             callback.processDHCP(packet);
                         } else {
                         System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
+                        callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
                         }
                     }
                 } catch (EOFException e) {
