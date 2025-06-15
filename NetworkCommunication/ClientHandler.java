@@ -37,6 +37,10 @@ public class ClientHandler extends Thread {
         connected = true;
     }
 
+    public void setClientIP(String ip) {
+        this.clientIP = ip;
+    }
+
     private void registerClient(String ip, String hostName){
             clientIP = ip;
             processor.onClientRegister(clientIP, this, hostName);
@@ -49,8 +53,10 @@ public class ClientHandler extends Thread {
             if (obj instanceof Packet packet) {
                 if("DHCP".equals(packet.protocol)){
                     processor.handleDHCP(packet, this);
-                    
-                } else { 
+                } else if("DISCONNECT".equals(packet.protocol)){
+                    System.out.println("Received DISCONNECT packet from " + clientIP);
+                    break;
+                } else{ 
                     processor.onPacketReceived(packet);
                 }
             }
@@ -67,7 +73,7 @@ public class ClientHandler extends Thread {
         }
     }
 
-    private void cleanup() {
+    public void cleanup() {
         try {
             if (clientIP != null) {
                 processor.onClientDisconnect(clientIP);

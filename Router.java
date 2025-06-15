@@ -54,10 +54,25 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
     @Override
     public void onClientDisconnect(String ip) {
-        connectedClients.remove(ip);
+        if (!connectedClients.containsKey(ip)) return;
+
+        ClientHandler handler = connectedClients.remove(ip);
         clientList.remove(ip);
-        System.out.println("Client disconnected: " + ip);
-        broadcastConnectionsList();
+        if (addressSpace.containsKey(ip)) {
+            addressSpace.put(ip, "");
+            System.out.println("Unassigned IP: " + ip);
+        }
+
+        try {
+                if (handler != null && !handler.isInterrupted()) {
+                    handler.interrupt();
+                }
+            } catch (Exception e) {
+                System.out.println("Error during handler interrupt: " + e.getMessage());
+            }
+
+            System.out.println("Client disconnected: " + ip);
+            broadcastConnectionsList();
     }
 
     public void broadcastConnectionsList(){
@@ -172,6 +187,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
             if (handler != null) {
                 connectedClients.remove(clientOldIP);
+                handler.setClientIP(clientNewIP);
                 onClientRegister(clientNewIP, handler, clientHostName);
             } else {
                 System.out.println("Handler not found for DHCP request from " + clientOldIP);

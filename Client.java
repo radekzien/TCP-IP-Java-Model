@@ -90,7 +90,7 @@ public class Client  implements ClientCallback{
         seg = duh.createSegment(ip, destIP, msg);
         pac = duh.createPacket(ip, destIP, "TCP", seg);
 
-        System.out.println("Created Packet: \nSender IP: " + ip + "\n" + "Destination IP: " + destIP + "\n" +"Protocol: " + pac.protocol + "Segment Payload: " + seg.getPayload());
+        System.out.println("Created Packet: \nSender IP: " + ip + "\n" + "Destination IP: " + destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + seg.getPayload());
     }
 
     public void sendToRouter(){
@@ -153,11 +153,19 @@ public class Client  implements ClientCallback{
 
     public void close() {
         try {
+            if(out != null){
+                seg = duh.createSegment(ip, routerIP, "DISCONNECT");
+                pac = duh.createPacket(ip, routerIP, "DISCONNECT", seg);
+                out.writeObject(pac);
+                out.flush();
+
+                Thread.sleep(100);
+            }
             if(listener != null){
                 listener.shutdown();
             }
             socket.close();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }

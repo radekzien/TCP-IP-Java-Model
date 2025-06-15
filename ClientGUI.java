@@ -50,7 +50,8 @@ public class ClientGUI extends JFrame{
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                closeConnection();
+                client.close();
+                dispose();
             }
         });
         setLocationRelativeTo(null);
@@ -64,12 +65,6 @@ public class ClientGUI extends JFrame{
         add(cards);
 
         setVisible(true);
-    }
-
-    private void closeConnection(){
-        client.close();
-        dispose();
-        System.exit(0);
     }
 
     private void initClientListPanel(){
