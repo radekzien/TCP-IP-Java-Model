@@ -10,6 +10,7 @@ import NetworkCommunication.ResponseListener;
 import NetworkDataUnits.DataUnitHandler;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import SimUtils.MACAssigner;
 
 public class Client  implements ClientCallback{
 //----- VARIABLES -----
@@ -40,17 +41,20 @@ public class Client  implements ClientCallback{
 
 //----- MAIN -----
     public static void main(String[] args) {
-        if(args.length < 4){
-            System.out.println("Usage: java Client <hostName> <mac> <routerHost> [routerPort]");
+        if(args.length != 1){
+            System.out.println("Usage: java Client <hostName>");
             return;
         }
 
+        MACAssigner assigner = new MACAssigner();
         String hostName = args[0];
-        String mac = args[1];
-        String routerHost = args[2];
+        String mac = assigner.assignMAC();
+        String routerHost = "0.0.0.0";
         int routerPort = 12345;
 
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
+
+        System.out.println("Starting Client " + hostName + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
     }
 
 //----- CONSTRUCTOR -----
