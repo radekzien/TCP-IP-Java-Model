@@ -1,5 +1,3 @@
-- Implement disconnection logic
-- Update disconnection when exiting chat window
 - Handle edge cases gracefully (Can't find client, Client disconnected, Router disconnected)
 - Finish off base implementation of current protocols
 - Refactor current code
