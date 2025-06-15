@@ -55,6 +55,11 @@ public class ClientHandler extends Thread {
                     processor.handleDHCP(packet, this);
                 } else if("DISCONNECT".equals(packet.protocol)){
                     System.out.println("Received DISCONNECT packet from " + clientIP);
+
+                    Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
+                    Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, "DISCONNECT-ACK", ackSeg);
+                    sendPacket(ackPacket);
+
                     break;
                 } else{ 
                     processor.onPacketReceived(packet);

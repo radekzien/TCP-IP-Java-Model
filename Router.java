@@ -79,6 +79,10 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
     for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
         String CLIENT_IP = entry.getKey();
         ClientHandler handler = entry.getValue();
+
+        if (handler == null) {
+            continue;
+        }
         
         Segment listSeg = new Segment(ip, CLIENT_IP);
         listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));

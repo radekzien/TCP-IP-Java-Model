@@ -39,6 +39,9 @@ public class Client  implements ClientCallback{
 
     ClientGUI clientGUI;
 
+//ACK BOOLEAN VARIABLES
+    private volatile boolean disconnectAckReceived = false;
+
 //----- MAIN -----
     public static void main(String[] args) {
         if(args.length != 1){
@@ -150,7 +153,7 @@ public class Client  implements ClientCallback{
         return(connectionList);
     }
 
-
+//----- DISCONNECTION -----
     public void close() {
         try {
             if(out != null){
@@ -159,7 +162,19 @@ public class Client  implements ClientCallback{
                 out.writeObject(pac);
                 out.flush();
 
-                Thread.sleep(100);
+                //For disconnect-ack timeout
+                synchronized(this){
+                    long waitUntil = System.currentTimeMillis() + 5000;
+                    while(!disconnectAckReceived && System.currentTimeMillis() < waitUntil){
+                        wait(waitUntil - System.currentTimeMillis());
+                    }
+                }
+                if(disconnectAckReceived){
+                    System.out.println("DISCONNECT-ACK Recieved. Closing connection.");
+                } else {
+                    System.out.println("DISCONNECT-ACK TIMEOUT. Closing connection anyway.");
+                }
+
             }
             if(listener != null){
                 listener.shutdown();
@@ -167,6 +182,14 @@ public class Client  implements ClientCallback{
             socket.close();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onDisconnectACK() {
+        disconnectAckReceived = true;
+        synchronized(this) {
+            notifyAll();  // wake up any waiting thread
         }
     }
 

@@ -42,9 +42,12 @@ public class ResponseListener extends Thread {
                             }
                         } else if("DHCP-ACK".equals(packet.protocol)){
                             callback.processDHCP(packet);
+                        } else if("DISCONNECT-ACK".equals(packet.protocol)){
+                                System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
+                                callback.onDisconnectACK();
                         } else {
-                        System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
-                        callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
+                            System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
+                            callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
                         }
                     }
                 } catch (EOFException e) {
