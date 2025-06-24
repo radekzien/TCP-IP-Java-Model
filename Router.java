@@ -45,12 +45,14 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         connectedClients.put(ip, handler);
         clientList.put(ip, hostName);
         System.out.println("Registered client: " + ip);
+        config.printSeparator();
         broadcastConnectionsList();
     }
 
     @Override
     public void onPacketReceived(Packet packet) {
         System.out.println("Packet received from: " + packet.srcIP);
+        config.printSeparator();
         inBuffer.offer(packet);
     }
 
@@ -71,9 +73,11 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
                 }
             } catch (Exception e) {
                 System.out.println("Error during handler interrupt: " + e.getMessage());
+                config.printSeparator();
             }
 
             System.out.println("Client disconnected: " + ip);
+            config.printSeparator();
             broadcastConnectionsList();
     }
 
@@ -102,6 +106,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         try{
             transport.start();
             System.out.println("Router running on port: " + port);
+            config.printSeparator();
             running = true;
             new Thread(this).start();
         } catch(Exception e){
@@ -138,6 +143,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         Packet pac = outBuffer.poll();
         transport.sendPacket(pac);
         System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
+        config.printSeparator();
     }
 
     public void processBuffers(){
@@ -190,6 +196,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         System.out.println(clientNewIP);
           if (clientNewIP == null) {
             System.out.println("No IPs left in address space.");
+            config.printSeparator();
             return;
         }
         
@@ -204,6 +211,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
                 onClientRegister(clientNewIP, handler, clientHostName);
             } else {
                 System.out.println("Handler not found for DHCP request from " + clientOldIP);
+                config.printSeparator();
             }
 
 

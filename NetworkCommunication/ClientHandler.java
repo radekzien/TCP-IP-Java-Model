@@ -4,8 +4,10 @@ import java.net.Socket;
 
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import SimUtils.SimConfig;
 
 public class ClientHandler extends Thread {
+    SimConfig config = new SimConfig();
     private Socket socket;
     private PacketProcessor processor;
     private ObjectOutputStream out;
@@ -25,6 +27,7 @@ public class ClientHandler extends Thread {
             handleIncomingPackets();
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("ClientHandler error for " + clientIP + ": " + e.getMessage());
+            config.printSeparator();
         } finally {
             cleanup();
         }
@@ -55,6 +58,7 @@ public class ClientHandler extends Thread {
                     processor.handleDHCP(packet, this);
                 } else if("DISCONNECT".equals(packet.protocol)){
                     System.out.println("Received DISCONNECT packet from " + clientIP);
+                    config.printSeparator();
 
                     Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
                     Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, "DISCONNECT-ACK", ackSeg);
@@ -75,6 +79,7 @@ public class ClientHandler extends Thread {
             out.flush();
         } catch (IOException e) {
             System.out.println("Failed to send packet to " + clientIP);
+            config.printSeparator();
         }
     }
 
@@ -88,6 +93,7 @@ public class ClientHandler extends Thread {
             }
         } catch (IOException e) {
             System.out.println("Error closing client connection: " + clientIP);
+            config.printSeparator();
         }
     }
 }

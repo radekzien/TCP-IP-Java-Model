@@ -60,6 +60,7 @@ public class Client  implements ClientCallback{
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
 
         System.out.println("Starting Client " + hostName + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
+        config.printSeparator();
     }
 
 //----- CONSTRUCTOR -----
@@ -94,8 +95,6 @@ public class Client  implements ClientCallback{
         this.message = msg;
         seg = duh.createSegment(ip, destIP, msg);
         pac = duh.createPacket(ip, destIP, "TCP", seg);
-
-        System.out.println("Created Packet: \nSender IP: " + ip + "\n" + "Destination IP: " + destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + seg.getPayload());
     }
 
     public void sendToRouter(){
@@ -106,6 +105,7 @@ public class Client  implements ClientCallback{
         try{
             out.writeObject(pac);
              System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
+             config.printSeparator();
             out.flush();
            
             
@@ -146,6 +146,7 @@ public class Client  implements ClientCallback{
             System.out.println(" - " + ip + " (" + name + ")")
             
         );
+        config.printSeparator();
         if(clientGUI != null){
             clientGUI.updateClientList(newList);
         }
@@ -161,6 +162,8 @@ public class Client  implements ClientCallback{
             if(out != null){
                 seg = duh.createSegment(ip, routerIP, "DISCONNECT");
                 pac = duh.createPacket(ip, routerIP, "DISCONNECT", seg);
+                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
+                config.printSeparator();
                 out.writeObject(pac);
                 out.flush();
 

@@ -1,5 +1,8 @@
 package SimUtils;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class SimConfig {
 
     public static int addressAmount = 4; //Determines size of address space
@@ -21,5 +24,14 @@ public class SimConfig {
 
     public String getNetworkIP(){
         return(networkIP);
+    }
+
+    public void printSeparator(){
+        LocalDateTime now = LocalDateTime.now();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss:SSS");
+
+        String time = now.format(formatter);
+        System.out.println("\r\n------------------------ " + time + "\r\n");
     }
 }
