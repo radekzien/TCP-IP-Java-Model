@@ -11,8 +11,10 @@ import NetworkDataUnits.DataUnitHandler;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
 import SimUtils.MACAssigner;
+import SimUtils.SimConfig;
 
 public class Client  implements ClientCallback{
+    static SimConfig config = new SimConfig();
 //----- VARIABLES -----
     String hostName;
     String ip = "0.0.0.0";
@@ -52,8 +54,8 @@ public class Client  implements ClientCallback{
         MACAssigner assigner = new MACAssigner();
         String hostName = args[0];
         String mac = assigner.assignMAC();
-        String routerHost = "0.0.0.0";
-        int routerPort = 12345;
+        String routerHost = config.getHost();
+        int routerPort = config.getPort();
 
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
 

@@ -12,17 +12,19 @@ import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
 import NetworkUtils.PacketListener;
 import NetworkUtils.SocketServerTransport;
+import SimUtils.SimConfig;
 
 
 public class Router implements Runnable, PacketProcessor, PacketListener {
+    SimConfig config = new SimConfig();
 //----- VARIABLES -----
     private SocketServerTransport transport;
 
     //----- ROUTER INFO -----
-    String ip = "192.168.1.1";
+    String ip = config.getNetworkIP() + "1";
     String mac;
     private boolean running = false;
-    private int port = 12345;
+    private int port = config.getPort();
 
     //----- BUFFERS AND TABLES -----
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
@@ -96,7 +98,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 //----- RUNNING METHODS -----
     public void start() throws IOException {
         transport = new SocketServerTransport(port, this, connectedClients);
-        createAddresses();
+        createAddresses(config.getAmount());
         try{
             transport.start();
             System.out.println("Router running on port: " + port);
@@ -153,11 +155,18 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
     }
 
 //----- ADDRESS ALLOCATION AND DHCP -----
-    public void createAddresses(){
-        addressSpace.put("192.168.1.2", "");
-        addressSpace.put("192.168.1.3", "");
-        addressSpace.put("192.168.1.4", "");
-        addressSpace.put("192.168.1.5", "");
+    public void createAddresses(int amount){
+        if(amount <= 255){
+            int i = 2;
+            while(i < amount){
+                String address = "192.168.1." + Integer.toString(i);
+                addressSpace.put(address, "");
+                i++;
+            }
+        } else {
+            System.out.println("ERROR: addressAmount needs to be <= 255. Change config");
+        }
+
     }
 
     public String allocateAddress(){
