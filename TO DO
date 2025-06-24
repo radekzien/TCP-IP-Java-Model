@@ -1,7 +1,7 @@
-- Implement disconnection logic
-- Update disconnection when exiting chat window
-- Handle edge cases gracefully (Can't find client, Client disconnected, Router disconnected)
-- Finish off base implementation of current protocols
-- Refactor current code
--------- End of Phase 1
-- Look at implementing protocols
+IMPLEMENT TCP
+- Three way handshake
+- Sequencing
+- Acknowledgements
+- Retransmission
+- Window size for flow control?
+- Error detection

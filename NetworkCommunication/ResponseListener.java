@@ -7,8 +7,10 @@ import java.net.Socket;
 import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import SimUtils.SimConfig;
 
 public class ResponseListener extends Thread {
+    SimConfig config = new SimConfig();
     private Socket socket;
     private ObjectInputStream in;
     private boolean running = true;
@@ -33,6 +35,7 @@ public class ResponseListener extends Thread {
 
                     if (response instanceof Packet packet) {
                         System.out.println(packet.protocol + " packet received from " + packet.srcIP);
+                        config.printSeparator();
                         if("BCAST".equals(packet.protocol)){
                             Segment resSeg = packet.getPayload();
                             Object payload = resSeg.getPayload();
@@ -42,13 +45,19 @@ public class ResponseListener extends Thread {
                             }
                         } else if("DHCP-ACK".equals(packet.protocol)){
                             callback.processDHCP(packet);
+                        } else if("DISCONNECT-ACK".equals(packet.protocol)){
+                                System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
+                                config.printSeparator();
+                                callback.onDisconnectACK();
                         } else {
-                        System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
-                        callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
+                            System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
+                            config.printSeparator();
+                            callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
                         }
                     }
                 } catch (EOFException e) {
                     System.out.println("Connection closed by router");
+                    config.printSeparator();
                     break;
                 }
             }
@@ -56,6 +65,7 @@ public class ResponseListener extends Thread {
             if (running) {
                 e.printStackTrace();
                 System.out.println("Failed to receive message from router");
+                config.printSeparator();
             }
         }
     }

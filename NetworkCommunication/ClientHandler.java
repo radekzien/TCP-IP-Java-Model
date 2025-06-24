@@ -4,8 +4,10 @@ import java.net.Socket;
 
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import SimUtils.SimConfig;
 
 public class ClientHandler extends Thread {
+    SimConfig config = new SimConfig();
     private Socket socket;
     private PacketProcessor processor;
     private ObjectOutputStream out;
@@ -25,6 +27,7 @@ public class ClientHandler extends Thread {
             handleIncomingPackets();
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("ClientHandler error for " + clientIP + ": " + e.getMessage());
+            config.printSeparator();
         } finally {
             cleanup();
         }
@@ -35,6 +38,10 @@ public class ClientHandler extends Thread {
         out.flush();
         in = new ObjectInputStream(socket.getInputStream());
         connected = true;
+    }
+
+    public void setClientIP(String ip) {
+        this.clientIP = ip;
     }
 
     private void registerClient(String ip, String hostName){
@@ -49,8 +56,16 @@ public class ClientHandler extends Thread {
             if (obj instanceof Packet packet) {
                 if("DHCP".equals(packet.protocol)){
                     processor.handleDHCP(packet, this);
-                    
-                } else { 
+                } else if("DISCONNECT".equals(packet.protocol)){
+                    System.out.println("Received DISCONNECT packet from " + clientIP);
+                    config.printSeparator();
+
+                    Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
+                    Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, "DISCONNECT-ACK", ackSeg);
+                    sendPacket(ackPacket);
+
+                    break;
+                } else{ 
                     processor.onPacketReceived(packet);
                 }
             }
@@ -64,10 +79,11 @@ public class ClientHandler extends Thread {
             out.flush();
         } catch (IOException e) {
             System.out.println("Failed to send packet to " + clientIP);
+            config.printSeparator();
         }
     }
 
-    private void cleanup() {
+    public void cleanup() {
         try {
             if (clientIP != null) {
                 processor.onClientDisconnect(clientIP);
@@ -77,6 +93,7 @@ public class ClientHandler extends Thread {
             }
         } catch (IOException e) {
             System.out.println("Error closing client connection: " + clientIP);
+            config.printSeparator();
         }
     }
 }

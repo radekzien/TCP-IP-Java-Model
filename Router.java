@@ -12,17 +12,19 @@ import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
 import NetworkUtils.PacketListener;
 import NetworkUtils.SocketServerTransport;
+import SimUtils.SimConfig;
 
 
 public class Router implements Runnable, PacketProcessor, PacketListener {
+    SimConfig config = new SimConfig();
 //----- VARIABLES -----
     private SocketServerTransport transport;
 
     //----- ROUTER INFO -----
-    String ip = "192.168.1.1";
+    String ip = config.getNetworkIP() + "1";
     String mac;
     private boolean running = false;
-    private int port = 12345;
+    private int port = config.getPort();
 
     //----- BUFFERS AND TABLES -----
     private final Queue<Packet> inBuffer = new ConcurrentLinkedQueue<>();
@@ -43,27 +45,50 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         connectedClients.put(ip, handler);
         clientList.put(ip, hostName);
         System.out.println("Registered client: " + ip);
+        config.printSeparator();
         broadcastConnectionsList();
     }
 
     @Override
     public void onPacketReceived(Packet packet) {
         System.out.println("Packet received from: " + packet.srcIP);
+        config.printSeparator();
         inBuffer.offer(packet);
     }
 
     @Override
     public void onClientDisconnect(String ip) {
-        connectedClients.remove(ip);
+        if (!connectedClients.containsKey(ip)) return;
+
+        ClientHandler handler = connectedClients.remove(ip);
         clientList.remove(ip);
-        System.out.println("Client disconnected: " + ip);
-        broadcastConnectionsList();
+        if (addressSpace.containsKey(ip)) {
+            addressSpace.put(ip, "");
+            System.out.println("Unassigned IP: " + ip);
+        }
+
+        try {
+                if (handler != null && !handler.isInterrupted()) {
+                    handler.interrupt();
+                }
+            } catch (Exception e) {
+                System.out.println("Error during handler interrupt: " + e.getMessage());
+                config.printSeparator();
+            }
+
+            System.out.println("Client disconnected: " + ip);
+            config.printSeparator();
+            broadcastConnectionsList();
     }
 
     public void broadcastConnectionsList(){
     for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
         String CLIENT_IP = entry.getKey();
         ClientHandler handler = entry.getValue();
+
+        if (handler == null) {
+            continue;
+        }
         
         Segment listSeg = new Segment(ip, CLIENT_IP);
         listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
@@ -77,10 +102,11 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 //----- RUNNING METHODS -----
     public void start() throws IOException {
         transport = new SocketServerTransport(port, this, connectedClients);
-        createAddresses();
+        createAddresses(config.getAmount());
         try{
             transport.start();
             System.out.println("Router running on port: " + port);
+            config.printSeparator();
             running = true;
             new Thread(this).start();
         } catch(Exception e){
@@ -117,6 +143,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         Packet pac = outBuffer.poll();
         transport.sendPacket(pac);
         System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
+        config.printSeparator();
     }
 
     public void processBuffers(){
@@ -134,11 +161,18 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
     }
 
 //----- ADDRESS ALLOCATION AND DHCP -----
-    public void createAddresses(){
-        addressSpace.put("192.168.1.2", "");
-        addressSpace.put("192.168.1.3", "");
-        addressSpace.put("192.168.1.4", "");
-        addressSpace.put("192.168.1.5", "");
+    public void createAddresses(int amount){
+        if(amount <= 255){
+            int i = 2;
+            while(i < amount){
+                String address = "192.168.1." + Integer.toString(i);
+                addressSpace.put(address, "");
+                i++;
+            }
+        } else {
+            System.out.println("ERROR: addressAmount needs to be <= 255. Change config");
+        }
+
     }
 
     public String allocateAddress(){
@@ -162,6 +196,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         System.out.println(clientNewIP);
           if (clientNewIP == null) {
             System.out.println("No IPs left in address space.");
+            config.printSeparator();
             return;
         }
         
@@ -172,9 +207,11 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
             if (handler != null) {
                 connectedClients.remove(clientOldIP);
+                handler.setClientIP(clientNewIP);
                 onClientRegister(clientNewIP, handler, clientHostName);
             } else {
                 System.out.println("Handler not found for DHCP request from " + clientOldIP);
+                config.printSeparator();
             }
 
 

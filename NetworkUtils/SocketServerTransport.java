@@ -3,14 +3,15 @@ package NetworkUtils;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import NetworkCommunication.ClientHandler;
 import NetworkCommunication.PacketProcessor;
 import NetworkDataUnits.Packet;
+import SimUtils.SimConfig;
 
 public class SocketServerTransport implements NetworkTransport{
+    SimConfig config = new SimConfig();
     private ServerSocket serverSocket;
     private PacketListener listener;
     private PacketProcessor processor;
@@ -54,6 +55,7 @@ public class SocketServerTransport implements NetworkTransport{
             handler.sendPacket(packet);
         } else {
             System.out.println("No client handler for " + destIP);
+            config.printSeparator();
         }
     }
 
