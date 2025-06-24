@@ -46,6 +46,7 @@ public class Client  implements ClientCallback{
 
 //----- MAIN -----
     public static void main(String[] args) {
+
         if(args.length != 1){
             System.out.println("Usage: java Client <hostName>");
             return;
@@ -53,6 +54,7 @@ public class Client  implements ClientCallback{
 
         MACAssigner assigner = new MACAssigner();
         String hostName = args[0];
+
         String mac = assigner.assignMAC();
         String routerHost = config.getHost();
         int routerPort = config.getPort();
