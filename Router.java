@@ -164,7 +164,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
     public void createAddresses(int amount){
         if(amount <= 255){
             int i = 2;
-            while(i < amount){
+            while(i < amount + 2){
                 String address = "192.168.1." + Integer.toString(i);
                 addressSpace.put(address, "");
                 i++;
