@@ -129,6 +129,8 @@ public class ClientGUI extends JFrame{
             StringBuilder history = chatHistories.get(ip);
             if (history != null) {
                 chat.setText(history.toString());
+            } else {
+                chat.setText("");
             }
         setTitle("Chat with " + currentHostName);
 
@@ -152,7 +154,7 @@ public class ClientGUI extends JFrame{
         }
 
          chatHistories
-            .computeIfAbsent(hostName, k -> new StringBuilder())
+            .computeIfAbsent(currentChatIP, k -> new StringBuilder())
             .append("Me: ").append(msg).append("\n");
 
         client.createTCPMessage(msg);
@@ -178,7 +180,7 @@ public class ClientGUI extends JFrame{
             String hostName = client.getConnectionList().getOrDefault(senderIP, senderIP);
 
             chatHistories
-                .computeIfAbsent(hostName, k -> new StringBuilder())
+                .computeIfAbsent(senderIP, k -> new StringBuilder())
                 .append(hostName).append(": ").append(msg).append("\n");
 
             SwingUtilities.invokeLater(() -> {
