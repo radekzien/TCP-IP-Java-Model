@@ -1,17 +1,14 @@
+import NetworkCommunication.*;
+
 import java.io.*;
-import java.net.Socket;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 import javax.swing.SwingUtilities;
 
-import NetworkCommunication.ClientCallback;
-import NetworkCommunication.ResponseListener;
-import NetworkDataUnits.DataUnitHandler;
-import NetworkDataUnits.Packet;
-import NetworkDataUnits.Segment;
-import SimUtils.MACAssigner;
-import SimUtils.SimConfig;
+import NetworkDataUnits.*;
+import SimUtils.*;
 
 public class Client  implements ClientCallback{
     static SimConfig config = new SimConfig();
@@ -40,6 +37,12 @@ public class Client  implements ClientCallback{
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
     ClientGUI clientGUI;
+
+//TCP VARIABLES
+    int sendSeq = 0;
+    int expSeq = 0;
+    ArrayList<Integer> expectedACKs = new ArrayList<>();
+    ConcurrentMap<Packet, String> inTransit = new ConcurrentHashMap<>(); //REPLACE STRING WITH TIMER OBJECT
 
 //ACK BOOLEAN VARIABLES
     private volatile boolean disconnectAckReceived = false;
@@ -82,7 +85,7 @@ public class Client  implements ClientCallback{
             listener.start();
 
             seg = duh.createSegment(ip, "255.255.255.255", hostName);
-            pac = duh.createPacket(ip, "255.255.255.255", "DHCP", seg);
+            pac = duh.createPacket(ip, "255.255.255.255", "DHCP", -1, -1, seg);
 
             out.writeObject(pac);
             out.flush();
@@ -93,20 +96,28 @@ public class Client  implements ClientCallback{
     }
 
 // ----- MESSAGING AND MESSAGE HANDLING -----
-    public void createTCPMessage(String msg){
-        this.message = msg;
-        seg = duh.createSegment(ip, destIP, msg);
-        pac = duh.createPacket(ip, destIP, "TCP", seg);
+    public void sendTCP(String msg, String destIP){
+        Segment seg = new Segment(ip, destIP);
+        seg.addPayload(msg);
+        Packet pac = new Packet(ip, destIP, "TCP", sendSeq, -1, seg);
+        expectedACKs.add(sendSeq);
+        inTransit.put(pac, "Retransmission timer"); //ADD RETRANSMISSION TIMER + LOGIC
+        sendToRouter(pac);
+        updateSendSeq();
     }
 
-    public void sendToRouter(){
+    public void sendToRouter(Packet pac){
         if (socket == null || socket.isClosed()) {
             System.out.println("Cannot send: socket is closed");
             return;
         }
         try{
             out.writeObject(pac);
-             System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
+            if(pac.getPayload().getPayload() instanceof String){
+                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
+            } else {
+                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol);
+            }
              config.printSeparator();
             out.flush();
            
@@ -115,6 +126,15 @@ public class Client  implements ClientCallback{
             e.printStackTrace();
             System.out.println("Failed to communicate with router");
         }
+    }
+
+    @Override
+    public void processTCP(Packet packet){
+        sendToApp(packet.srcIP, packet.getPayload().getPayload());
+        updateExpSeq();
+        Segment ackSeg = new Segment(getIP(), packet.srcIP);
+        Packet ackPac = new Packet(getIP(), packet.srcIP, "TCP-ACK", -1, packet.seqNum, ackSeg);
+        sendToRouter(ackPac);
     }
 
         @Override
@@ -158,12 +178,33 @@ public class Client  implements ClientCallback{
         return(connectionList);
     }
 
+//-----TCP UTILS-----
+    public void updateSendSeq(){
+        sendSeq = (sendSeq + 1) % 5;
+    }
+
+    public void updateExpSeq(){
+        expSeq = (expSeq + 1) % 5;
+    }
+
+    public int getExpSeqNum(){
+        return expSeq;
+    }
+
+    public String getIP(){
+        return(ip);
+    }
+
+    public boolean isAck(int ackNum){
+        return(expectedACKs.contains(ackNum));
+    }
+
 //----- DISCONNECTION -----
     public void close() {
         try {
             if(out != null){
                 seg = duh.createSegment(ip, routerIP, "DISCONNECT");
-                pac = duh.createPacket(ip, routerIP, "DISCONNECT", seg);
+                pac = duh.createPacket(ip, routerIP, "DISCONNECT", -1, -1, seg);
                 System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
                 config.printSeparator();
                 out.writeObject(pac);

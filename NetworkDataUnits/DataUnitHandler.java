@@ -7,8 +7,8 @@ public class DataUnitHandler {
         return seg;
     }
 
-    public Packet createPacket(String ip, String destIP, String protocol, Segment seg){
-        Packet pac = new Packet(ip, destIP, protocol, seg);
+    public Packet createPacket(String ip, String destIP, String protocol, int seq, int ack, Segment seg){
+        Packet pac = new Packet(ip, destIP, protocol, seq, ack, seg);
         return pac;
     }
 }

@@ -49,10 +49,22 @@ public class ResponseListener extends Thread {
                                 System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
                                 config.printSeparator();
                                 callback.onDisconnectACK();
+                        } else if ("TCP".equals(packet.protocol)){
+                            if(packet.seqNum == callback.getExpSeqNum()){
+                                callback.processTCP(packet);
+                            } else {
+                                System.out.println("Unexpected SeqNum from " + packet.srcIP);
+                            }
+                        } else if("TCP-ACK".equals(packet.protocol)){
+                            if(callback.isAck(packet.ackNum)){
+                                System.out.println("ACK received: " + packet.ackNum + " from " + packet.srcIP);
+                                //Remove Ack from expectedACKs
+                                //Stop timer
+                                //Remove packet from transit list
+                            }
                         } else {
                             System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
-                            config.printSeparator();
-                            callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
+                           
                         }
                     }
                 } catch (EOFException e) {
