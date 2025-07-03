@@ -25,15 +25,11 @@ public class Client  implements ClientCallback{
     String routerHost;
     int routerPort;
 
-    Segment seg;
-    Packet pac;
-
     String routerIP = "";
 
     private Socket socket;
     private ObjectOutputStream out;
     private ResponseListener listener;
-    private DataUnitHandler duh = new DataUnitHandler();
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
     ClientGUI clientGUI;
@@ -84,8 +80,9 @@ public class Client  implements ClientCallback{
             listener = new ResponseListener(socket, this);
             listener.start();
 
-            seg = duh.createSegment(ip, "255.255.255.255", hostName);
-            pac = duh.createPacket(ip, "255.255.255.255", "DHCP", -1, -1, seg);
+            Segment seg = new Segment(ip, "255.255.255.255");
+            seg.addPayload(hostName);
+            Packet pac = new Packet(ip, "255.255.255.255", "DHCP", -1, -1, seg);
 
             out.writeObject(pac);
             out.flush();
@@ -203,8 +200,9 @@ public class Client  implements ClientCallback{
     public void close() {
         try {
             if(out != null){
-                seg = duh.createSegment(ip, routerIP, "DISCONNECT");
-                pac = duh.createPacket(ip, routerIP, "DISCONNECT", -1, -1, seg);
+                Segment seg = new Segment(ip, routerIP);
+                seg.addPayload("DISCONNECT");
+                Packet pac = new Packet(ip, routerIP, "DISCONNECT", -1, -1, seg);
                 System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
                 config.printSeparator();
                 out.writeObject(pac);
