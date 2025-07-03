@@ -10,6 +10,7 @@ public interface ClientCallback {
  void sendToApp(String ip, Object message);
  void onDisconnectACK();
  void processTCP(Packet packet);
- boolean isAck(int ackNum);
+ boolean isAck(String ip, int ackNum);
  int getExpSeqNum();
+ void processTCPACK(Packet packet);
 }

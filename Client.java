@@ -37,7 +37,7 @@ public class Client  implements ClientCallback{
 //TCP VARIABLES
     int sendSeq = 0;
     int expSeq = 0;
-    ArrayList<Integer> expectedACKs = new ArrayList<>();
+    ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>();
     ConcurrentMap<Packet, String> inTransit = new ConcurrentHashMap<>(); //REPLACE STRING WITH TIMER OBJECT
 
 //ACK BOOLEAN VARIABLES
@@ -97,10 +97,11 @@ public class Client  implements ClientCallback{
         Segment seg = new Segment(ip, destIP);
         seg.addPayload(msg);
         Packet pac = new Packet(ip, destIP, "TCP", sendSeq, -1, seg);
-        expectedACKs.add(sendSeq);
+        expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
+        expectedACKs.get(destIP).add(sendSeq);
+        updateSendSeq();
         inTransit.put(pac, "Retransmission timer"); //ADD RETRANSMISSION TIMER + LOGIC
         sendToRouter(pac);
-        updateSendSeq();
     }
 
     public void sendToRouter(Packet pac){
@@ -132,6 +133,15 @@ public class Client  implements ClientCallback{
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
         Packet ackPac = new Packet(getIP(), packet.srcIP, "TCP-ACK", -1, packet.seqNum, ackSeg);
         sendToRouter(ackPac);
+    }
+
+    @Override
+    public void processTCPACK(Packet packet){
+        Set<Integer> acks = expectedACKs.get(packet.srcIP);
+        if (acks != null && acks.remove(packet.ackNum)) {
+            //Stop timer
+            expectedACKs.get(packet.srcIP).remove(packet.ackNum);
+        }
     }
 
         @Override
@@ -192,8 +202,8 @@ public class Client  implements ClientCallback{
         return(ip);
     }
 
-    public boolean isAck(int ackNum){
-        return(expectedACKs.contains(ackNum));
+    public boolean isAck(String ip, int ackNum){
+        return (expectedACKs.containsKey(ip) && expectedACKs.get(ip).contains(ackNum));
     }
 
 //----- DISCONNECTION -----
@@ -238,5 +248,6 @@ public class Client  implements ClientCallback{
             notifyAll();  // wake up any waiting thread
         }
     }
+
 
 }
