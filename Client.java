@@ -36,8 +36,8 @@ public class Client  implements ClientCallback{
     ClientGUI clientGUI;
 
 //TCP VARIABLES
-    int sendSeq = 0;
-    int expSeq = 0;
+    ConcurrentHashMap<String, Integer> sendSeqs = new ConcurrentHashMap<>(); 
+    ConcurrentHashMap<String, Integer> expSeqs = new ConcurrentHashMap<>(); 
     ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>();
     ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>();
     final int maxRetries = 3;
@@ -99,6 +99,8 @@ public class Client  implements ClientCallback{
     public void sendTCP(String msg, String destIP){
         Segment seg = new Segment(ip, destIP);
         seg.addPayload(msg);
+        sendSeqs.putIfAbsent(destIP, 0);
+        int sendSeq = sendSeqs.get(destIP);
 
         //Send TCP
         Packet pac = new Packet(ip, destIP, "TCP", sendSeq, -1, seg);
@@ -107,7 +109,7 @@ public class Client  implements ClientCallback{
         
         RetransmitTask task = new RetransmitTask(pac, destIP);
 
-        updateSendSeq();
+        updateSendSeq(destIP);
         ScheduledFuture<?> future = scheduler.schedule(task, retryIntervalSeconds, TimeUnit.SECONDS);
         inTransit.put(pac, future);
 
@@ -139,7 +141,7 @@ public class Client  implements ClientCallback{
     @Override
     public void processTCP(Packet packet){
         sendToApp(packet.srcIP, packet.getPayload().getPayload());
-        updateExpSeq();
+        updateExpSeq(packet.srcIP);
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
         Packet ackPac = new Packet(getIP(), packet.srcIP, "TCP-ACK", -1, packet.seqNum, ackSeg);
         sendToRouter(ackPac);
@@ -203,16 +205,22 @@ public class Client  implements ClientCallback{
     }
 
 //-----TCP UTILS-----
-    public void updateSendSeq(){
+    public void updateSendSeq(String destIP){
+        int sendSeq = sendSeqs.get(destIP);
         sendSeq = (sendSeq + 1) % 5;
+        sendSeqs.put(destIP, sendSeq);
     }
 
-    public void updateExpSeq(){
+    public void updateExpSeq(String srcIP){
+        expSeqs.putIfAbsent(srcIP, 0);
+        int expSeq = expSeqs.get(srcIP);
         expSeq = (expSeq + 1) % 5;
+        expSeqs.put(srcIP, expSeq);
     }
 
-    public int getExpSeqNum(){
-        return expSeq;
+    public int getExpSeqNum(String srcIP){
+        expSeqs.putIfAbsent(srcIP, 0);
+        return expSeqs.get(srcIP);
     }
 
     public String getIP(){

@@ -11,6 +11,6 @@ public interface ClientCallback {
  void onDisconnectACK();
  void processTCP(Packet packet);
  boolean isAck(String ip, int ackNum);
- int getExpSeqNum();
+ int getExpSeqNum(String srcIP);
  void processTCPACK(Packet packet);
 }

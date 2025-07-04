@@ -50,7 +50,7 @@ public class ResponseListener extends Thread {
                                 config.printSeparator();
                                 callback.onDisconnectACK();
                         } else if ("TCP".equals(packet.protocol)){
-                            if(packet.seqNum == callback.getExpSeqNum()){
+                            if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){
                                 callback.processTCP(packet);
                             } else {
                                 System.out.println("Unexpected SeqNum from " + packet.srcIP);
