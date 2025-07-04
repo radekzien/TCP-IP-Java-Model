@@ -173,6 +173,10 @@ public class ClientGUI extends JFrame{
             }
         });
     }
+
+    public void sendingError(String errorMessage){
+        chat.append("ERROR: THERE HAS BEEN AN ISSUE SENDING THE MESSAGE (" + errorMessage + ")");
+    }
     public void receiveMessage(String senderIP, String msg){
         if(senderIP.equals(currentChatIP)){
             String hostName = client.getConnectionList().getOrDefault(senderIP, senderIP);

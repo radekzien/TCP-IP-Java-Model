@@ -249,17 +249,15 @@ public class Client  implements ClientCallback{
                     System.out.println("Retransmitting packet with seq " + packet.seqNum + " to " + destIP + " (retry #" + (retries+1) + ")");
                     sendToRouter(packet);
                     retries++;
-                    // Reschedule itself again after retryIntervalSeconds
                     ScheduledFuture<?> future = scheduler.schedule(this, retryIntervalSeconds, TimeUnit.SECONDS);
                     inTransit.put(packet, future);
                 } else {
                     System.out.println("Max retries reached for packet seq " + packet.seqNum + ". Giving up.");
                     expected.remove(packet.seqNum);
                     inTransit.remove(packet);
-                    // You can also notify app or handle failure here
+                    clientGUI.sendingError("No ACK");
                 }
             } else {
-                // ACK received or no longer expected, cancel task
                 System.out.println("ACK received for seq " + packet.seqNum + ", cancelling retransmission.");
                 ScheduledFuture<?> future = inTransit.remove(packet);
                 if (future != null) future.cancel(false);
