@@ -1,10 +1,7 @@
 IMPLEMENT TCP
 - Three way handshake
-- Sequencing
-- Acknowledgements
-- Retransmission
-- Window size for flow control?
 - Error detection
+- Possible edge case: What happens to tracked seqnums if a new client adopts a previously used IP?
 
 CLEAN UP
 - Edge case where client tries to connect with no address space
