@@ -56,6 +56,7 @@ public class ResponseListener extends Thread {
                                 System.out.println("Unexpected SeqNum from " + packet.srcIP);
                             }
                         } else if("TCP-ACK".equals(packet.protocol)){
+                            System.out.println("FROM: " + packet.srcIP + "\nTO: " + packet.destIP + "\nPROTOCOL: " + packet.protocol + "\nSEQ: " + packet.seqNum + "\nACK: " + packet.ackNum);
                             callback.processTCPACK(packet);
                         } else {
                             System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());

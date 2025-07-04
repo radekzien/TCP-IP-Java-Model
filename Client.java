@@ -12,6 +12,7 @@ import SimUtils.*;
 
 public class Client  implements ClientCallback{
     static SimConfig config = new SimConfig();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4); //Look into configurable pool size
 //----- VARIABLES -----
     String hostName;
     String ip = "0.0.0.0";
@@ -38,7 +39,9 @@ public class Client  implements ClientCallback{
     int sendSeq = 0;
     int expSeq = 0;
     ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>();
-    ConcurrentMap<Packet, String> inTransit = new ConcurrentHashMap<>(); //REPLACE STRING WITH TIMER OBJECT
+    ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>();
+    final int maxRetries = 3;
+    final int retryIntervalSeconds = 2;
 
 //ACK BOOLEAN VARIABLES
     private volatile boolean disconnectAckReceived = false;
@@ -96,11 +99,18 @@ public class Client  implements ClientCallback{
     public void sendTCP(String msg, String destIP){
         Segment seg = new Segment(ip, destIP);
         seg.addPayload(msg);
+
+        //Send TCP
         Packet pac = new Packet(ip, destIP, "TCP", sendSeq, -1, seg);
         expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
         expectedACKs.get(destIP).add(sendSeq);
+        
+        RetransmitTask task = new RetransmitTask(pac, destIP);
+
         updateSendSeq();
-        inTransit.put(pac, "Retransmission timer"); //ADD RETRANSMISSION TIMER + LOGIC
+        ScheduledFuture<?> future = scheduler.schedule(task, retryIntervalSeconds, TimeUnit.SECONDS);
+        inTransit.put(pac, future);
+
         sendToRouter(pac);
     }
 
@@ -138,9 +148,16 @@ public class Client  implements ClientCallback{
     @Override
     public void processTCPACK(Packet packet){
         Set<Integer> acks = expectedACKs.get(packet.srcIP);
-        if (acks != null && acks.remove(packet.ackNum)) {
-            //Stop timer
+        if (acks != null) {
             expectedACKs.get(packet.srcIP).remove(packet.ackNum);
+
+            inTransit.entrySet().removeIf(entry -> {
+                boolean match = entry.getKey().seqNum == packet.ackNum && entry.getKey().srcIP.equals(packet.destIP);
+                if (match) {
+                    entry.getValue().cancel(false);
+                }
+                return match;
+            });
         }
     }
 
@@ -206,6 +223,42 @@ public class Client  implements ClientCallback{
         return (expectedACKs.containsKey(ip) && expectedACKs.get(ip).contains(ackNum));
     }
 
+    private class RetransmitTask implements Runnable {
+         private final Packet packet;
+        private final String destIP;
+        private int retries = 0;
+
+        RetransmitTask(Packet packet, String destIP) {
+            this.packet = packet;
+            this.destIP = destIP;
+        }
+
+        @Override
+        public void run() {
+            Set<Integer> expected = expectedACKs.get(destIP);
+            if (expected != null && expected.contains(packet.seqNum)) {
+                if (retries < maxRetries) {
+                    System.out.println("Retransmitting packet with seq " + packet.seqNum + " to " + destIP + " (retry #" + (retries+1) + ")");
+                    sendToRouter(packet);
+                    retries++;
+                    // Reschedule itself again after retryIntervalSeconds
+                    ScheduledFuture<?> future = scheduler.schedule(this, retryIntervalSeconds, TimeUnit.SECONDS);
+                    inTransit.put(packet, future);
+                } else {
+                    System.out.println("Max retries reached for packet seq " + packet.seqNum + ". Giving up.");
+                    expected.remove(packet.seqNum);
+                    inTransit.remove(packet);
+                    // You can also notify app or handle failure here
+                }
+            } else {
+                // ACK received or no longer expected, cancel task
+                System.out.println("ACK received for seq " + packet.seqNum + ", cancelling retransmission.");
+                ScheduledFuture<?> future = inTransit.remove(packet);
+                if (future != null) future.cancel(false);
+            }
+        }
+    }
+
 //----- DISCONNECTION -----
     public void close() {
         try {
@@ -231,6 +284,9 @@ public class Client  implements ClientCallback{
                     System.out.println("DISCONNECT-ACK TIMEOUT. Closing connection anyway.");
                 }
 
+            }
+            if(scheduler != null){
+                scheduler.shutdown();
             }
             if(listener != null){
                 listener.shutdown();

@@ -133,7 +133,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
     public void switchPacket(){ //Checks will be added later
         Packet pac = inBuffer.poll();
-        if(pac != null && "TCP".equals(pac.protocol)){
+        if(pac != null && "TCP".equals(pac.protocol) || "TCP-ACK".equals(pac.protocol)){
             outBuffer.add(pac);
             System.out.println("Router switched packet from " + pac.srcIP + " to " + pac.destIP);
         }

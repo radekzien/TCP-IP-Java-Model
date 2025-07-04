@@ -1,5 +1,6 @@
 package NetworkDataUnits;
 import java.io.Serializable;
+import java.util.Objects;
 
 public class Packet implements Serializable{
     public String srcIP;
@@ -20,5 +21,19 @@ public class Packet implements Serializable{
 
     public Segment getPayload(){
         return payload;
+    }
+
+    @Override
+    public boolean equals(Object o) { //For cehcking ACK Packets
+        if (this == o) return true;
+        if (!(o instanceof Packet)) return false;
+        Packet packet = (Packet) o;
+        return seqNum == packet.seqNum &&
+               Objects.equals(destIP, packet.destIP);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(destIP,seqNum);
     }
 }
