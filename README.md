@@ -1,5 +1,5 @@
 # TCP-IP-Java-Model
-This is a Java model simulating TCP communication, and other protocols, used in communication. This is a very simple model, using one router and a user-defined amount of clients which may connect to it, all of which will run on your machine. This is supposed to showcase the fundamentals of TCP (Ordering and error checking), how clients connect to a network, and how routers switch packets.
+This is a Java model simulating TCP communication and other protocols used in communication. This is a very simple model, using one router and a user-defined amount of clients which may connect to it, all of which will run on your machine. This is supposed to showcase the fundamentals of TCP (Ordering and error checking), how clients connect to a network, and how routers switch packets.
 
 ## ----- SETTING UP THE PROJECT -----
 This is how you set up the project on your machine. These instructions are assuming you are retrieving this project from my github. If not, please contact the author ASAP. Contact details can be found on @radekzien on github.
@@ -24,7 +24,7 @@ These variables are as follows:
 
 3. routerPort - This is an INTEGER value which determines the port which the router object uses for Socket communication. By default it is 12345
 
-4. networkIP - This is a STRING value which determines the SIMULATED network IP prefix. This will effect the IPs assigned to the clients during the DHCP process and the IPs     shown throughout the simulation.
+4. networkIP - This is a STRING value which determines the SIMULATED network IP prefix. This will affect the IPs assigned to the clients during the DHCP process and the IPs     shown throughout the simulation.
 
 5. errorChance - This is a DOUBLE value which determines the chances of TCP or TCP-ACK packets being corrupted. This value must be  0<= and >1. For NO error simulation,         change this value to 0. The default value is 0.1 (10% chance of corruption.)
 
