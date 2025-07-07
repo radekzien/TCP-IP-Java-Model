@@ -9,6 +9,7 @@ import javax.swing.SwingUtilities;
 
 import NetworkDataUnits.*;
 import SimUtils.*;
+import NetworkUtils.*;
 
 public class Client  implements ClientCallback{
     static SimConfig config = new SimConfig();
@@ -85,7 +86,7 @@ public class Client  implements ClientCallback{
 
             Segment seg = new Segment(ip, "255.255.255.255");
             seg.addPayload(hostName);
-            Packet pac = new Packet(ip, "255.255.255.255", "DHCP", -1, -1, seg);
+            Packet pac = new Packet(ip, "255.255.255.255", Protocols.DHCP, -1, -1, seg);
 
             out.writeObject(pac);
             out.flush();
@@ -103,7 +104,7 @@ public class Client  implements ClientCallback{
         int sendSeq = sendSeqs.get(destIP);
 
         //Send TCP
-        Packet pac = new Packet(ip, destIP, "TCP", sendSeq, -1, seg);
+        Packet pac = new Packet(ip, destIP, Protocols.TCP, sendSeq, -1, seg);
         expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
         expectedACKs.get(destIP).add(sendSeq);
         
@@ -143,7 +144,7 @@ public class Client  implements ClientCallback{
         sendToApp(packet.srcIP, packet.getPayload().getPayload());
         updateExpSeq(packet.srcIP);
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
-        Packet ackPac = new Packet(getIP(), packet.srcIP, "TCP-ACK", -1, packet.seqNum, ackSeg);
+        Packet ackPac = new Packet(getIP(), packet.srcIP, Protocols.TCP_ACK, -1, packet.seqNum, ackSeg);
         sendToRouter(ackPac);
     }
 
@@ -271,7 +272,7 @@ public class Client  implements ClientCallback{
             if(out != null){
                 Segment seg = new Segment(ip, routerIP);
                 seg.addPayload("DISCONNECT");
-                Packet pac = new Packet(ip, routerIP, "DISCONNECT", -1, -1, seg);
+                Packet pac = new Packet(ip, routerIP, Protocols.DISCONNECT, -1, -1, seg);
                 System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
                 config.printSeparator();
                 out.writeObject(pac);

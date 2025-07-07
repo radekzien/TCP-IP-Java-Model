@@ -11,6 +11,7 @@ import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
 import NetworkUtils.PacketListener;
+import NetworkUtils.Protocols;
 import NetworkUtils.SocketServerTransport;
 import SimUtils.SimConfig;
 
@@ -92,7 +93,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         
         Segment listSeg = new Segment(ip, CLIENT_IP);
         listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
-        Packet packet = new Packet(ip, CLIENT_IP, "BCAST", -1, -1, listSeg);
+        Packet packet = new Packet(ip, CLIENT_IP, Protocols.BCAST, -1, -1, listSeg);
 
         handler.sendPacket(packet);
     }
@@ -133,7 +134,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
     public void switchPacket(){ //Checks will be added later
         Packet pac = inBuffer.poll();
-        if(pac != null && "TCP".equals(pac.protocol) || "TCP-ACK".equals(pac.protocol)){
+        if(pac != null && pac.protocol == Protocols.TCP|| pac.protocol == Protocols.TCP_ACK){
             outBuffer.add(pac);
             System.out.println("Router switched packet from " + pac.srcIP + " to " + pac.destIP);
         }
@@ -217,7 +218,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
             Segment returnSeg = new Segment(ip, clientNewIP);
             returnSeg.addPayload(clientNewIP);
-            Packet returnPac = new Packet(ip, clientOldIP, "DHCP-ACK", -1, -1, returnSeg);
+            Packet returnPac = new Packet(ip, clientOldIP, Protocols.DHCP_ACK, -1, -1, returnSeg);
             handler.sendPacket(returnPac);
         }
     }

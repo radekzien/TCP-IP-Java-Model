@@ -2,15 +2,17 @@ package NetworkDataUnits;
 import java.io.Serializable;
 import java.util.Objects;
 
+import NetworkUtils.Protocols;
+
 public class Packet implements Serializable{
     public String srcIP;
     public String destIP;
-    public String protocol;
+    public Protocols protocol;
     public int seqNum;
     public int ackNum;
     Segment payload;
 
-    public Packet(String src, String dest, String protocol, int seqNum, int ackNum, Segment seg){
+    public Packet(String src, String dest, Protocols protocol, int seqNum, int ackNum, Segment seg){
         this.srcIP = src;
         this.destIP = dest;
         this.protocol = protocol;
