@@ -4,6 +4,7 @@ import java.net.Socket;
 
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import NetworkUtils.Protocols;
 import SimUtils.SimConfig;
 
 public class ClientHandler extends Thread {
@@ -54,14 +55,15 @@ public class ClientHandler extends Thread {
         while (connected && !socket.isClosed()) {
             Object obj = in.readObject();
             if (obj instanceof Packet packet) {
-                if("DHCP".equals(packet.protocol)){
+                if(packet.protocol == Protocols.DHCP){
                     processor.handleDHCP(packet, this);
-                } else if("DISCONNECT".equals(packet.protocol)){
+                } else if(packet.protocol == Protocols.DISCONNECT){
                     System.out.println("Received DISCONNECT packet from " + clientIP);
                     config.printSeparator();
 
                     Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
-                    Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, "DISCONNECT-ACK", ackSeg);
+                    Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, Protocols.DISCONNECT_ACK, -1, -1, ackSeg);
+                    ackPacket.assignChecksum();
                     sendPacket(ackPacket);
 
                     break;

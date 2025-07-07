@@ -1,20 +1,20 @@
+import NetworkCommunication.*;
+
 import java.io.*;
-import java.net.Socket;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 import javax.swing.SwingUtilities;
 
-import NetworkCommunication.ClientCallback;
-import NetworkCommunication.ResponseListener;
-import NetworkDataUnits.DataUnitHandler;
-import NetworkDataUnits.Packet;
-import NetworkDataUnits.Segment;
-import SimUtils.MACAssigner;
-import SimUtils.SimConfig;
+import NetworkDataUnits.*;
+import SimUtils.*;
+import NetworkUtils.*;
 
 public class Client  implements ClientCallback{
     static SimConfig config = new SimConfig();
+    ErrorSim errorSim = new ErrorSim();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4); //Look into configurable pool size
 //----- VARIABLES -----
     String hostName;
     String ip = "0.0.0.0";
@@ -28,18 +28,22 @@ public class Client  implements ClientCallback{
     String routerHost;
     int routerPort;
 
-    Segment seg;
-    Packet pac;
-
     String routerIP = "";
 
     private Socket socket;
     private ObjectOutputStream out;
     private ResponseListener listener;
-    private DataUnitHandler duh = new DataUnitHandler();
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
     ClientGUI clientGUI;
+
+//TCP VARIABLES
+    ConcurrentHashMap<String, Integer> sendSeqs = new ConcurrentHashMap<>(); 
+    ConcurrentHashMap<String, Integer> expSeqs = new ConcurrentHashMap<>(); 
+    ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>();
+    ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>();
+    final int maxRetries = 3;
+    final int retryIntervalSeconds = 2;
 
 //ACK BOOLEAN VARIABLES
     private volatile boolean disconnectAckReceived = false;
@@ -81,8 +85,10 @@ public class Client  implements ClientCallback{
             listener = new ResponseListener(socket, this);
             listener.start();
 
-            seg = duh.createSegment(ip, "255.255.255.255", hostName);
-            pac = duh.createPacket(ip, "255.255.255.255", "DHCP", seg);
+            Segment seg = new Segment(ip, "255.255.255.255");
+            seg.addPayload(hostName);
+            Packet pac = new Packet(ip, "255.255.255.255", Protocols.DHCP, -1, -1, seg);
+            pac.assignChecksum();
 
             out.writeObject(pac);
             out.flush();
@@ -93,20 +99,40 @@ public class Client  implements ClientCallback{
     }
 
 // ----- MESSAGING AND MESSAGE HANDLING -----
-    public void createTCPMessage(String msg){
-        this.message = msg;
-        seg = duh.createSegment(ip, destIP, msg);
-        pac = duh.createPacket(ip, destIP, "TCP", seg);
+    public void sendTCP(String msg, String destIP){
+        Segment seg = new Segment(ip, destIP);
+        seg.addPayload(msg);
+        sendSeqs.putIfAbsent(destIP, 0);
+        int sendSeq = sendSeqs.get(destIP);
+
+        //Send TCP
+        Packet pac = new Packet(ip, destIP, Protocols.TCP, sendSeq, -1, seg);
+        pac.assignChecksum();
+        expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
+        expectedACKs.get(destIP).add(sendSeq);
+        
+        RetransmitTask task = new RetransmitTask(pac, destIP);
+
+        updateSendSeq(destIP);
+        ScheduledFuture<?> future = scheduler.schedule(task, retryIntervalSeconds, TimeUnit.SECONDS);
+        inTransit.put(pac, future);
+        Packet finalPac = errorSim.addError(pac); //Adds chance of a corrupted packet
+
+        sendToRouter(finalPac);
     }
 
-    public void sendToRouter(){
+    public void sendToRouter(Packet pac){
         if (socket == null || socket.isClosed()) {
             System.out.println("Cannot send: socket is closed");
             return;
         }
         try{
             out.writeObject(pac);
-             System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
+            if(pac.getPayload().getPayload() instanceof String){
+                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
+            } else {
+                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol);
+            }
              config.printSeparator();
             out.flush();
            
@@ -114,6 +140,33 @@ public class Client  implements ClientCallback{
         } catch (IOException e){
             e.printStackTrace();
             System.out.println("Failed to communicate with router");
+        }
+    }
+
+    @Override
+    public void processTCP(Packet packet){
+        sendToApp(packet.srcIP, packet.getPayload().getPayload());
+        updateExpSeq(packet.srcIP);
+        Segment ackSeg = new Segment(getIP(), packet.srcIP);
+        Packet ackPac = new Packet(getIP(), packet.srcIP, Protocols.TCP_ACK, -1, packet.seqNum, ackSeg);
+        ackPac.assignChecksum();
+        Packet finalAck = errorSim.addError(ackPac);
+        sendToRouter(finalAck);
+    }
+
+    @Override
+    public void processTCPACK(Packet packet){
+        Set<Integer> acks = expectedACKs.get(packet.srcIP);
+        if (acks != null) {
+            expectedACKs.get(packet.srcIP).remove(packet.ackNum);
+
+            inTransit.entrySet().removeIf(entry -> {
+                boolean match = entry.getKey().seqNum == packet.ackNum && entry.getKey().srcIP.equals(packet.destIP);
+                if (match) {
+                    entry.getValue().cancel(false);
+                }
+                return match;
+            });
         }
     }
 
@@ -158,12 +211,75 @@ public class Client  implements ClientCallback{
         return(connectionList);
     }
 
+//-----TCP UTILS-----
+    public void updateSendSeq(String destIP){
+        int sendSeq = sendSeqs.get(destIP);
+        sendSeq = (sendSeq + 1) % 5;
+        sendSeqs.put(destIP, sendSeq);
+    }
+
+    public void updateExpSeq(String srcIP){
+        expSeqs.putIfAbsent(srcIP, 0);
+        int expSeq = expSeqs.get(srcIP);
+        expSeq = (expSeq + 1) % 5;
+        expSeqs.put(srcIP, expSeq);
+    }
+
+    public int getExpSeqNum(String srcIP){
+        expSeqs.putIfAbsent(srcIP, 0);
+        return expSeqs.get(srcIP);
+    }
+
+    public String getIP(){
+        return(ip);
+    }
+
+    public boolean isAck(String ip, int ackNum){
+        return (expectedACKs.containsKey(ip) && expectedACKs.get(ip).contains(ackNum));
+    }
+
+    private class RetransmitTask implements Runnable {
+         private final Packet packet;
+        private final String destIP;
+        private int retries = 0;
+
+        RetransmitTask(Packet packet, String destIP) {
+            this.packet = packet;
+            this.destIP = destIP;
+        }
+
+        @Override
+        public void run() {
+            Set<Integer> expected = expectedACKs.get(destIP);
+            if (expected != null && expected.contains(packet.seqNum)) {
+                if (retries < maxRetries) {
+                    System.out.println("Retransmitting packet with seq " + packet.seqNum + " to " + destIP + " (retry #" + (retries+1) + ")");
+                    sendToRouter(packet);
+                    retries++;
+                    ScheduledFuture<?> future = scheduler.schedule(this, retryIntervalSeconds, TimeUnit.SECONDS);
+                    inTransit.put(packet, future);
+                } else {
+                    System.out.println("Max retries reached for packet seq " + packet.seqNum + ". Giving up.");
+                    expected.remove(packet.seqNum);
+                    inTransit.remove(packet);
+                    clientGUI.sendingError("No ACK");
+                }
+            } else {
+                System.out.println("ACK received for seq " + packet.seqNum + ", cancelling retransmission.");
+                ScheduledFuture<?> future = inTransit.remove(packet);
+                if (future != null) future.cancel(false);
+            }
+        }
+    }
+
 //----- DISCONNECTION -----
     public void close() {
         try {
             if(out != null){
-                seg = duh.createSegment(ip, routerIP, "DISCONNECT");
-                pac = duh.createPacket(ip, routerIP, "DISCONNECT", seg);
+                Segment seg = new Segment(ip, routerIP);
+                seg.addPayload("DISCONNECT");
+                Packet pac = new Packet(ip, routerIP, Protocols.DISCONNECT, -1, -1, seg);
+                pac.assignChecksum();
                 System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
                 config.printSeparator();
                 out.writeObject(pac);
@@ -183,6 +299,9 @@ public class Client  implements ClientCallback{
                 }
 
             }
+            if(scheduler != null){
+                scheduler.shutdown();
+            }
             if(listener != null){
                 listener.shutdown();
             }
@@ -199,5 +318,6 @@ public class Client  implements ClientCallback{
             notifyAll();  // wake up any waiting thread
         }
     }
+
 
 }

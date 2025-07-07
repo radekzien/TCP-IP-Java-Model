@@ -157,9 +157,7 @@ public class ClientGUI extends JFrame{
             .computeIfAbsent(currentChatIP, k -> new StringBuilder())
             .append("Me: ").append(msg).append("\n");
 
-        client.createTCPMessage(msg);
-        client.pac.destIP = currentChatIP;
-        client.sendToRouter();
+        client.sendTCP(msg, currentChatIP);
 
         chat.append("Me: " + msg + "\n");
         inputField.setText("");
@@ -174,6 +172,10 @@ public class ClientGUI extends JFrame{
                 }
             }
         });
+    }
+
+    public void sendingError(String errorMessage){
+        chat.append("ERROR: THERE HAS BEEN AN ISSUE SENDING THE MESSAGE (" + errorMessage + ")");
     }
     public void receiveMessage(String senderIP, String msg){
         if(senderIP.equals(currentChatIP)){

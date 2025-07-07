@@ -7,6 +7,7 @@ import java.net.Socket;
 import NetworkDataUnits.ClientListPayload;
 import NetworkDataUnits.Packet;
 import NetworkDataUnits.Segment;
+import NetworkUtils.Protocols;
 import SimUtils.SimConfig;
 
 public class ResponseListener extends Thread {
@@ -36,23 +37,38 @@ public class ResponseListener extends Thread {
                     if (response instanceof Packet packet) {
                         System.out.println(packet.protocol + " packet received from " + packet.srcIP);
                         config.printSeparator();
-                        if("BCAST".equals(packet.protocol)){
+                        if(packet.protocol == Protocols.BCAST){
                             Segment resSeg = packet.getPayload();
                             Object payload = resSeg.getPayload();
 
                             if(payload instanceof ClientListPayload clientList){
                                 callback.onClientListUpdated(clientList.getClientList());
                             }
-                        } else if("DHCP-ACK".equals(packet.protocol)){
+                        } else if(packet.protocol == Protocols.DHCP_ACK){
                             callback.processDHCP(packet);
-                        } else if("DISCONNECT-ACK".equals(packet.protocol)){
+                        } else if(packet.protocol == Protocols.DISCONNECT_ACK){
                                 System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
                                 config.printSeparator();
                                 callback.onDisconnectACK();
+                        } else if (packet.protocol == Protocols.TCP){
+                            if(packet.checksum == packet.computeChecksum()){
+                                if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){
+                                    callback.processTCP(packet);
+                                } else {
+                                    System.out.println("Unexpected SeqNum from " + packet.srcIP);
+                                }
+                            } else {
+                                System.out.println("Invalid checksum");
+                            }
+                        } else if(packet.protocol == Protocols.TCP_ACK){
+                            if(packet.checksum == packet.computeChecksum()){
+                                callback.processTCPACK(packet);
+                            } else {
+                                    System.out.println("Invalid checksum");
+                            }
                         } else {
                             System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
-                            config.printSeparator();
-                            callback.sendToApp(packet.srcIP, packet.getPayload().getPayload());
+                           
                         }
                     }
                 } catch (EOFException e) {

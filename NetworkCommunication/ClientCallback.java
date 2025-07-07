@@ -9,4 +9,8 @@ public interface ClientCallback {
  void processDHCP(Packet packet);
  void sendToApp(String ip, Object message);
  void onDisconnectACK();
+ void processTCP(Packet packet);
+ boolean isAck(String ip, int ackNum);
+ int getExpSeqNum(String srcIP);
+ void processTCPACK(Packet packet);
 }
