@@ -62,7 +62,8 @@ public class ClientHandler extends Thread {
                     config.printSeparator();
 
                     Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
-                    Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, Protocols.DISOCNNECT_ACK, -1, -1, ackSeg);
+                    Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, Protocols.DISCONNECT_ACK, -1, -1, ackSeg);
+                    ackPacket.assignChecksum();
                     sendPacket(ackPacket);
 
                     break;

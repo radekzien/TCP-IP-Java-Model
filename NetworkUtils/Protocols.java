@@ -6,7 +6,7 @@ public enum Protocols{
     DISCONNECT,
     TCP,
     DHCP_ACK,
-    DISOCNNECT_ACK,
+    DISCONNECT_ACK,
     TCP_ACK
 
 }

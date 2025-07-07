@@ -10,6 +10,7 @@ public class Packet implements Serializable{
     public Protocols protocol;
     public int seqNum;
     public int ackNum;
+    public int checksum;
     Segment payload;
 
     public Packet(String src, String dest, Protocols protocol, int seqNum, int ackNum, Segment seg){
@@ -25,8 +26,28 @@ public class Packet implements Serializable{
         return payload;
     }
 
+    public int computeChecksum() {
+        String data = srcIP + destIP + protocol.name() + seqNum + ackNum;
+        if (payload != null) {
+            data += payload.toString();
+        }
+
+        byte[] bytes = data.getBytes();
+        int sum = 0;
+
+        for (byte b : bytes) {
+            sum += (b & 0xFF);
+        }
+
+        return ~sum & 0xFFFF;
+    }
+
+    public void assignChecksum(){
+        this.checksum = computeChecksum(); 
+    }
+
     @Override
-    public boolean equals(Object o) { //For cehcking ACK Packets
+    public boolean equals(Object o) { //For checking ACK Packets
         if (this == o) return true;
         if (!(o instanceof Packet)) return false;
         Packet packet = (Packet) o;

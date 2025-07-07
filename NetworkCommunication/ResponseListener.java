@@ -46,19 +46,26 @@ public class ResponseListener extends Thread {
                             }
                         } else if(packet.protocol == Protocols.DHCP_ACK){
                             callback.processDHCP(packet);
-                        } else if(packet.protocol == Protocols.DISOCNNECT_ACK){
+                        } else if(packet.protocol == Protocols.DISCONNECT_ACK){
                                 System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
                                 config.printSeparator();
                                 callback.onDisconnectACK();
                         } else if (packet.protocol == Protocols.TCP){
-                            if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){
-                                callback.processTCP(packet);
+                            if(packet.checksum == packet.computeChecksum()){
+                                if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){
+                                    callback.processTCP(packet);
+                                } else {
+                                    System.out.println("Unexpected SeqNum from " + packet.srcIP);
+                                }
                             } else {
-                                System.out.println("Unexpected SeqNum from " + packet.srcIP);
+                                System.out.println("Invalid checksum");
                             }
                         } else if(packet.protocol == Protocols.TCP_ACK){
-                            System.out.println("FROM: " + packet.srcIP + "\nTO: " + packet.destIP + "\nPROTOCOL: " + packet.protocol + "\nSEQ: " + packet.seqNum + "\nACK: " + packet.ackNum);
-                            callback.processTCPACK(packet);
+                            if(packet.checksum == packet.computeChecksum()){
+                                callback.processTCPACK(packet);
+                            } else {
+                                    System.out.println("Invalid checksum");
+                            }
                         } else {
                             System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
                            

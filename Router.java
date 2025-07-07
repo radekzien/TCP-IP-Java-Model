@@ -94,6 +94,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         Segment listSeg = new Segment(ip, CLIENT_IP);
         listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
         Packet packet = new Packet(ip, CLIENT_IP, Protocols.BCAST, -1, -1, listSeg);
+        packet.assignChecksum();
 
         handler.sendPacket(packet);
     }
@@ -219,6 +220,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
             Segment returnSeg = new Segment(ip, clientNewIP);
             returnSeg.addPayload(clientNewIP);
             Packet returnPac = new Packet(ip, clientOldIP, Protocols.DHCP_ACK, -1, -1, returnSeg);
+            returnPac.assignChecksum();
             handler.sendPacket(returnPac);
         }
     }

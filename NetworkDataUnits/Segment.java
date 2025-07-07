@@ -21,4 +21,16 @@ public class Segment implements Serializable{
     public Object getPayload(){
         return(payload);
     }
+
+    @Override
+public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(sourcePort).append(destPort)
+      .append(seqNum).append(ackNum);
+
+    if (payload != null) {
+        sb.append(payload.toString());
+    }
+    return sb.toString();
+}
 }

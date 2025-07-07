@@ -87,6 +87,7 @@ public class Client  implements ClientCallback{
             Segment seg = new Segment(ip, "255.255.255.255");
             seg.addPayload(hostName);
             Packet pac = new Packet(ip, "255.255.255.255", Protocols.DHCP, -1, -1, seg);
+            pac.assignChecksum();
 
             out.writeObject(pac);
             out.flush();
@@ -105,6 +106,7 @@ public class Client  implements ClientCallback{
 
         //Send TCP
         Packet pac = new Packet(ip, destIP, Protocols.TCP, sendSeq, -1, seg);
+        pac.assignChecksum();
         expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
         expectedACKs.get(destIP).add(sendSeq);
         
@@ -145,6 +147,7 @@ public class Client  implements ClientCallback{
         updateExpSeq(packet.srcIP);
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
         Packet ackPac = new Packet(getIP(), packet.srcIP, Protocols.TCP_ACK, -1, packet.seqNum, ackSeg);
+        ackPac.assignChecksum();
         sendToRouter(ackPac);
     }
 
@@ -273,6 +276,7 @@ public class Client  implements ClientCallback{
                 Segment seg = new Segment(ip, routerIP);
                 seg.addPayload("DISCONNECT");
                 Packet pac = new Packet(ip, routerIP, Protocols.DISCONNECT, -1, -1, seg);
+                pac.assignChecksum();
                 System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
                 config.printSeparator();
                 out.writeObject(pac);
