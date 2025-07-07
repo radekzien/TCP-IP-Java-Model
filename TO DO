@@ -3,3 +3,9 @@ IMPLEMENT TCP
 
 CLEAN UP
 - Edge case where client tries to connect with no address space
+- Edge case where router disconnects before clients
+- Add config boolean for printing packets
+- Clean up printing
+- Improve readbability
+- Improve comments
+- Optimise and Refactor
