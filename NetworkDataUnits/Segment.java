@@ -22,15 +22,24 @@ public class Segment implements Serializable{
         return(payload);
     }
 
-    @Override
-public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(sourcePort).append(destPort)
-      .append(seqNum).append(ackNum);
+        @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(sourcePort).append(destPort)
+        .append(seqNum).append(ackNum);
 
-    if (payload != null) {
-        sb.append(payload.toString());
+        if (payload != null) {
+            sb.append(payload.toString());
+        }
+        return sb.toString();
     }
-    return sb.toString();
-}
+
+    public Segment(Segment original){
+        this.sourcePort = original.sourcePort;
+        this.destPort = original.destPort;
+        this.seqNum = original.seqNum;
+        this.ackNum = original.ackNum;
+        this.checksum = original.checksum;
+        this.payload = original.payload;  
+    }
 }

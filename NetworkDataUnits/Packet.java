@@ -59,4 +59,15 @@ public class Packet implements Serializable{
     public int hashCode() {
         return Objects.hash(destIP,seqNum);
     }
+
+    //Copy constructor for error simulation
+    public Packet(Packet original) {
+        this.srcIP = original.srcIP;
+        this.destIP = original.destIP;
+        this.protocol = original.protocol;
+        this.seqNum = original.seqNum;
+        this.ackNum = original.ackNum;
+        this.checksum = original.checksum;
+        this.payload = new Segment((Segment)original.payload); 
+    }
 }

@@ -13,6 +13,7 @@ import NetworkUtils.*;
 
 public class Client  implements ClientCallback{
     static SimConfig config = new SimConfig();
+    ErrorSim errorSim = new ErrorSim();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4); //Look into configurable pool size
 //----- VARIABLES -----
     String hostName;
@@ -115,8 +116,9 @@ public class Client  implements ClientCallback{
         updateSendSeq(destIP);
         ScheduledFuture<?> future = scheduler.schedule(task, retryIntervalSeconds, TimeUnit.SECONDS);
         inTransit.put(pac, future);
+        Packet finalPac = errorSim.addError(pac); //Adds chance of a corrupted packet
 
-        sendToRouter(pac);
+        sendToRouter(finalPac);
     }
 
     public void sendToRouter(Packet pac){
@@ -148,7 +150,8 @@ public class Client  implements ClientCallback{
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
         Packet ackPac = new Packet(getIP(), packet.srcIP, Protocols.TCP_ACK, -1, packet.seqNum, ackSeg);
         ackPac.assignChecksum();
-        sendToRouter(ackPac);
+        Packet finalAck = errorSim.addError(ackPac);
+        sendToRouter(finalAck);
     }
 
     @Override
