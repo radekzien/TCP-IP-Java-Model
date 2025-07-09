@@ -64,9 +64,6 @@ public class Client  implements ClientCallback{
         int routerPort = config.getPort();
 
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
-
-        System.out.println("Starting Client " + hostName + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
-        config.printSeparator();
     }
 
 //----- CONSTRUCTOR -----
@@ -90,8 +87,7 @@ public class Client  implements ClientCallback{
             Packet pac = new Packet(ip, "255.255.255.255", Protocols.DHCP, -1, -1, seg);
             pac.assignChecksum();
 
-            out.writeObject(pac);
-            out.flush();
+            sendToRouter(pac);
 
         } catch (IOException e){
             System.out.println("Client " + ip + " failed to connect to router: " + e.getMessage());
@@ -172,13 +168,33 @@ public class Client  implements ClientCallback{
 
         @Override
     public void processDHCP(Packet packet){
-        Segment seg = packet.getPayload();
-        Object payload = seg.getPayload();
-        routerIP = packet.srcIP;
-        if(payload instanceof String){
-            ip = (String) payload;
-            SwingUtilities.invokeLater(() -> clientGUI = new ClientGUI(this));
+        if(packet.protocol == Protocols.DHCP_ACK){
+            Segment seg = packet.getPayload();
+            Object payload = seg.getPayload();
+            routerIP = packet.srcIP;
+            if(payload instanceof String){
+                ip = (String) payload;
+                SwingUtilities.invokeLater(() -> clientGUI = new ClientGUI(this));
+
+                System.out.println("Starting Client " + hostName + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
+                config.printSeparator();
+            }
+        } else {
+            System.out.println("NO IPs AVAILABLE. PLEASE TRY AGAIN.");
+            System.out.println("Exiting...");
+                        if(scheduler != null){
+                scheduler.shutdown();
+            }
+            if(listener != null){
+                listener.shutdown();
+            }
+            try {   
+                socket.close();
+            } catch (IOException e){
+                e.printStackTrace();
+            }
         }
+
 
     }
 

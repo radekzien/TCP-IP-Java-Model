@@ -44,7 +44,7 @@ public class ResponseListener extends Thread {
                             if(payload instanceof ClientListPayload clientList){
                                 callback.onClientListUpdated(clientList.getClientList());
                             }
-                        } else if(packet.protocol == Protocols.DHCP_ACK){
+                        } else if(packet.protocol == Protocols.DHCP_ACK || packet.protocol == Protocols.DHCP_NACK){
                             callback.processDHCP(packet);
                         } else if(packet.protocol == Protocols.DISCONNECT_ACK){
                                 System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);

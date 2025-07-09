@@ -199,11 +199,18 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
           if (clientNewIP == null) {
             System.out.println("No IPs left in address space.");
             config.printSeparator();
+
+            Segment returnSeg = new Segment(ip, clientOldIP);
+            returnSeg.addPayload("NO IP AVAILABLE");
+            Packet returnPac = new Packet(ip, clientOldIP, Protocols.DHCP_NACK, -1, -1, returnSeg);
+            returnPac.assignChecksum();
+            handler.sendPacket(returnPac);
+            handler.cleanup();
             return;
         }
         
         Object segmentPayload = clientSegment.getPayload();
-        if(segmentPayload instanceof String){
+        if(segmentPayload instanceof String && clientNewIP != null){
             String clientHostName = (String) segmentPayload;
             addressSpace.put(clientNewIP, clientHostName);
 
