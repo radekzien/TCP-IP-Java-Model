@@ -90,7 +90,8 @@ public class Client  implements ClientCallback{
             sendToRouter(pac);
 
         } catch (IOException e){
-            System.out.println("Client " + ip + " failed to connect to router: " + e.getMessage());
+            System.out.println("Failed to connect to router: ");
+            System.out.println("    " + e.getMessage());
         }
     }
 
@@ -326,6 +327,24 @@ public class Client  implements ClientCallback{
             e.printStackTrace();
         }
     }
+
+    public void handleRouterDisconnect(){
+        System.out.println("Router Disconnected. Shutting down.");
+        System.out.println(":::RESTART TO RECONNECT:::");
+        if(scheduler != null){
+                scheduler.shutdown();
+            }
+        if(listener != null){
+            listener.shutdown();
+        }
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.exit(0);
+    }
+
 
     @Override
     public void onDisconnectACK() {

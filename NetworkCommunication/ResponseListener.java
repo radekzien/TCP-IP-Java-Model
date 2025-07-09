@@ -79,8 +79,7 @@ public class ResponseListener extends Thread {
             }
         } catch (IOException | ClassNotFoundException e) {
             if (running) {
-                e.printStackTrace();
-                System.out.println("Failed to receive message from router");
+                callback.handleRouterDisconnect();
                 config.printSeparator();
             }
         }

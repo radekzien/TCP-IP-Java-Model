@@ -13,4 +13,5 @@ public interface ClientCallback {
  boolean isAck(String ip, int ackNum);
  int getExpSeqNum(String srcIP);
  void processTCPACK(Packet packet);
+ void handleRouterDisconnect();
 }
