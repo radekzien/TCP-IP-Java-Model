@@ -26,7 +26,9 @@ These variables are as follows:
 
 4. networkIP - This is a STRING value which determines the SIMULATED network IP prefix. This will affect the IPs assigned to the clients during the DHCP process and the IPs     shown throughout the simulation.
 
-5. errorChance - This is a DOUBLE value which determines the chances of TCP or TCP-ACK packets being corrupted. This value must be  0<= and >1. For NO error simulation,         change this value to 0. The default value is 0.1 (10% chance of corruption.)
+5. errorChance - This is a DOUBLE value which determines the chances of TCP packets being corrupted. This value must be  0<= and >1. For NO error simulation,         change this value to 0. The default value is 0.1 (10% chance of corruption.)
+
+6. dropChance - This is a DOUBLE value which determines the chances of TCP packets being dropped in order to simulate packet loss. This value must be 0<= and >1. For NO packet loss simulation change this value to 0. The default is 0.2 (20% chance of loss)
 
 ## ----- RUNNING THE PROJECT -----
 This is how you run the project. For each router and client instance, you will need a new terminal window. Windows command line or powershell will be fine.
