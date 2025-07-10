@@ -26,4 +26,8 @@ public class ErrorSim {
         }
         return corruptedPac;
     }
+
+    public Boolean isDropped(){
+        return (random.nextDouble() < config.getDropChance());
+    }
 }

@@ -90,6 +90,7 @@ public class Client  implements ClientCallback{
             sendToRouter(pac);
 
         } catch (IOException e){
+            config.printSeparator();
             System.out.println("Failed to connect to router: ");
             System.out.println("    " + e.getMessage());
         }
@@ -115,27 +116,34 @@ public class Client  implements ClientCallback{
         inTransit.put(pac, future);
         Packet finalPac = errorSim.addError(pac); //Adds chance of a corrupted packet
 
-        sendToRouter(finalPac);
+        if(!errorSim.isDropped()){
+            sendToRouter(finalPac);
+        } else {
+            config.printSeparator();
+            System.out.println(":::Simulation message: Packet dropped:::");
+        }
     }
 
     public void sendToRouter(Packet pac){
         if (socket == null || socket.isClosed()) {
+            config.printSeparator();
             System.out.println("Cannot send: socket is closed");
             return;
         }
         try{
+            config.printSeparator();
+            System.out.println("Sending " + pac.protocol + " packet...");
             out.writeObject(pac);
-            if(pac.getPayload().getPayload() instanceof String){
-                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
-            } else {
-                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol);
+            if(config.printPackets){
+                System.out.println(pac.toString());
             }
-             config.printSeparator();
+
             out.flush();
            
             
         } catch (IOException e){
             e.printStackTrace();
+            config.printSeparator();
             System.out.println("Failed to communicate with router");
         }
     }
@@ -147,8 +155,7 @@ public class Client  implements ClientCallback{
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
         Packet ackPac = new Packet(getIP(), packet.srcIP, Protocols.TCP_ACK, -1, packet.seqNum, ackSeg);
         ackPac.assignChecksum();
-        Packet finalAck = errorSim.addError(ackPac);
-        sendToRouter(finalAck);
+        sendToRouter(ackPac);
     }
 
     @Override
@@ -177,10 +184,11 @@ public class Client  implements ClientCallback{
                 ip = (String) payload;
                 SwingUtilities.invokeLater(() -> clientGUI = new ClientGUI(this));
 
-                System.out.println("Starting Client " + hostName + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
                 config.printSeparator();
+                System.out.println("Starting Client " + hostName + "\nIP: " + ip + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
             }
         } else {
+            config.printSeparator();
             System.out.println("NO IPs AVAILABLE. PLEASE TRY AGAIN.");
             System.out.println("Exiting...");
                         if(scheduler != null){
@@ -213,12 +221,12 @@ public class Client  implements ClientCallback{
     public void onClientListUpdated(ConcurrentMap<String, String> newList) {
         connectionList.clear();
         connectionList.putAll(newList);
+        config.printSeparator();
         System.out.println(hostName + " updated connection list:");
         connectionList.forEach((ip, name) ->
             System.out.println(" - " + ip + " (" + name + ")")
             
         );
-        config.printSeparator();
         if(clientGUI != null){
             clientGUI.updateClientList(newList);
         }
@@ -270,12 +278,14 @@ public class Client  implements ClientCallback{
             Set<Integer> expected = expectedACKs.get(destIP);
             if (expected != null && expected.contains(packet.seqNum)) {
                 if (retries < maxRetries) {
+                    config.printSeparator();
                     System.out.println("Retransmitting packet with seq " + packet.seqNum + " to " + destIP + " (retry #" + (retries+1) + ")");
                     sendToRouter(packet);
                     retries++;
                     ScheduledFuture<?> future = scheduler.schedule(this, retryIntervalSeconds, TimeUnit.SECONDS);
                     inTransit.put(packet, future);
                 } else {
+                    config.printSeparator();
                     System.out.println("Max retries reached for packet seq " + packet.seqNum + ". Giving up.");
                     expected.remove(packet.seqNum);
                     inTransit.remove(packet);
@@ -297,8 +307,10 @@ public class Client  implements ClientCallback{
                 seg.addPayload("DISCONNECT");
                 Packet pac = new Packet(ip, routerIP, Protocols.DISCONNECT, -1, -1, seg);
                 pac.assignChecksum();
-                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
-                config.printSeparator();
+                if(config.printPackets){
+                    config.printSeparator();
+                    System.out.println("Sent packet:\n" + pac.toString());
+                }
                 out.writeObject(pac);
                 out.flush();
 
@@ -310,8 +322,10 @@ public class Client  implements ClientCallback{
                     }
                 }
                 if(disconnectAckReceived){
+                    config.printSeparator();
                     System.out.println("DISCONNECT-ACK Recieved. Closing connection.");
                 } else {
+                    config.printSeparator();
                     System.out.println("DISCONNECT-ACK TIMEOUT. Closing connection anyway.");
                 }
 
@@ -329,6 +343,7 @@ public class Client  implements ClientCallback{
     }
 
     public void handleRouterDisconnect(){
+        config.printSeparator();
         System.out.println("Router Disconnected. Shutting down.");
         System.out.println(":::RESTART TO RECONNECT:::");
         if(scheduler != null){

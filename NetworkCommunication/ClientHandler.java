@@ -59,7 +59,6 @@ public class ClientHandler extends Thread {
                     processor.handleDHCP(packet, this);
                 } else if(packet.protocol == Protocols.DISCONNECT){
                     System.out.println("Received DISCONNECT packet from " + clientIP);
-                    config.printSeparator();
 
                     Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
                     Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, Protocols.DISCONNECT_ACK, -1, -1, ackSeg);
@@ -80,8 +79,8 @@ public class ClientHandler extends Thread {
             out.writeObject(pac);
             out.flush();
         } catch (IOException e) {
-            System.out.println("Failed to send packet to " + clientIP);
             config.printSeparator();
+            System.out.println("Failed to send packet to " + clientIP);
         }
     }
 
@@ -94,8 +93,8 @@ public class ClientHandler extends Thread {
                 socket.close();
             }
         } catch (IOException e) {
-            System.out.println("Error closing client connection: " + clientIP);
             config.printSeparator();
+            System.out.println("Error closing client connection: " + clientIP);
         }
     }
 }

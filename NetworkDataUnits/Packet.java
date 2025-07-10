@@ -46,6 +46,15 @@ public class Packet implements Serializable{
         this.checksum = computeChecksum(); 
     }
 
+    public String toString(){
+        return
+            "From: " + srcIP + "\n" +
+            "To: " + destIP + "\n" +
+            "Protocol " + protocol + "\n" +
+            "seqNum " + seqNum + "\n" +
+            "ackNum " + ackNum;
+    }
+
     @Override
     public boolean equals(Object o) { //For checking ACK Packets
         if (this == o) return true;

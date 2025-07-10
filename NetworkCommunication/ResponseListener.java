@@ -35,8 +35,11 @@ public class ResponseListener extends Thread {
                     Object response = in.readObject();
 
                     if (response instanceof Packet packet) {
-                        System.out.println(packet.protocol + " packet received from " + packet.srcIP);
                         config.printSeparator();
+                        System.out.println(packet.protocol + " packet received from " + packet.srcIP);
+                        if(config.printPackets){
+                            System.out.println(packet.toString());
+                        }
                         if(packet.protocol == Protocols.BCAST){
                             Segment resSeg = packet.getPayload();
                             Object payload = resSeg.getPayload();
@@ -47,40 +50,40 @@ public class ResponseListener extends Thread {
                         } else if(packet.protocol == Protocols.DHCP_ACK || packet.protocol == Protocols.DHCP_NACK){
                             callback.processDHCP(packet);
                         } else if(packet.protocol == Protocols.DISCONNECT_ACK){
-                                System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
                                 config.printSeparator();
+                                System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
                                 callback.onDisconnectACK();
                         } else if (packet.protocol == Protocols.TCP){
                             if(packet.checksum == packet.computeChecksum()){
                                 if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){
                                     callback.processTCP(packet);
                                 } else {
-                                    System.out.println("Unexpected SeqNum from " + packet.srcIP);
+                                    config.printSeparator();
+                                    System.out.println("Unexpected SeqNum from " + packet.srcIP +". Expected " + callback.getExpSeqNum(packet.srcIP) + " received " + packet.seqNum);
                                 }
                             } else {
-                                System.out.println("Invalid checksum");
+                                config.printSeparator();
+                                System.out.println("Invalid checksum from " + packet.srcIP);
                             }
                         } else if(packet.protocol == Protocols.TCP_ACK){
                             if(packet.checksum == packet.computeChecksum()){
                                 callback.processTCPACK(packet);
                             } else {
-                                    System.out.println("Invalid checksum");
+                                config.printSeparator();
+                                System.out.println("Invalid checksum from " + packet.srcIP);
                             }
-                        } else {
-                            System.out.println(packet.srcIP + ": " + packet.getPayload().getPayload());
-                           
                         }
                     }
                 } catch (EOFException e) {
-                    System.out.println("Connection closed by router");
                     config.printSeparator();
+                    System.out.println("Connection closed by router");
                     break;
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
             if (running) {
-                callback.handleRouterDisconnect();
                 config.printSeparator();
+                callback.handleRouterDisconnect();
             }
         }
     }

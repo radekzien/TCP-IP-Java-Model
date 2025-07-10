@@ -110,6 +110,7 @@ public class ClientGUI extends JFrame{
         sendButton = new JButton("Send");
         backButton = new JButton("Back");
 
+        inputField.addActionListener(e -> sendMessage());
         sendButton.addActionListener(e -> sendMessage());
         backButton.addActionListener(e -> showClientList());
 
@@ -132,7 +133,7 @@ public class ClientGUI extends JFrame{
             } else {
                 chat.setText("");
             }
-        setTitle("Chat with " + currentHostName);
+        setTitle("[" + client.hostName + "] " + "Chat with " + currentHostName);
 
         CardLayout cl = (CardLayout) (cards.getLayout());
         cl.show(cards, CHAT_PANEL);
@@ -175,7 +176,7 @@ public class ClientGUI extends JFrame{
     }
 
     public void sendingError(String errorMessage){
-        chat.append("ERROR: THERE HAS BEEN AN ISSUE SENDING THE MESSAGE (" + errorMessage + ")");
+        chat.append("ERROR: THERE HAS BEEN AN ISSUE SENDING THE MESSAGE (" + errorMessage + ")\n");
     }
     public void receiveMessage(String senderIP, String msg){
         if(senderIP.equals(currentChatIP)){

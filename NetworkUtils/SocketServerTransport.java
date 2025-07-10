@@ -38,7 +38,7 @@ public class SocketServerTransport implements NetworkTransport{
                     ClientHandler handler = new ClientHandler(socket, processor);
 
                     handler.start();
-                    String clientIP = "TEMP"; // Should get from packet
+                    String clientIP = "TEMP";
                     clients.put(clientIP, handler);
                 }
             } catch (IOException e){
@@ -54,8 +54,8 @@ public class SocketServerTransport implements NetworkTransport{
         if (handler != null) {
             handler.sendPacket(packet);
         } else {
-            System.out.println("No client handler for " + destIP);
             config.printSeparator();
+            System.out.println("No client handler for " + destIP);
         }
     }
 
