@@ -5,10 +5,12 @@ import java.util.Random;
 import NetworkDataUnits.Packet;
 
 public class ErrorSim {
+//-----VARIABLES-----
     Random random = new Random();
     SimConfig config = new SimConfig();
 
-    public Packet addError(Packet packet){
+//-----ERROR SIMULATION METHODS-----
+    public Packet addError(Packet packet){//Simulates packet corruption
         Packet corruptedPac = new Packet(packet);
         if(random.nextDouble() < config.getErrorChance()){
             int choice = random.nextInt(3);
@@ -27,7 +29,7 @@ public class ErrorSim {
         return corruptedPac;
     }
 
-    public Boolean isDropped(){
+    public Boolean isDropped(){//Simulates packet loss
         return (random.nextDouble() < config.getDropChance());
     }
 }

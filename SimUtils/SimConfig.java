@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 
 public class SimConfig {
 
+//-----SIMULATION VARIABLES---- (CHANGE THIS)
     public static int addressAmount = 4; //INTEGER: Determines size of address space DEFAULT = 4
     public static String routerHost = "0.0.0.0"; //STRING: Host on which router runs DEFAULT = "0.0.0.0"
     public static int routerPort = 12345; //INTEGER: Port on which router runs DEFAULT = 12345
@@ -13,6 +14,7 @@ public class SimConfig {
     public static double dropChance = 0.2; //DOUBLE: Chance of dropped packet AKA packet lost in transmission DEFAULT = 0.2
     public boolean printPackets = true; //BOOLEAN: Prints packet details in terminal DEFAULT = true
 
+//-----GETTER METHODS-----
     public String getHost(){
         return(routerHost);
     }
@@ -37,6 +39,7 @@ public class SimConfig {
         return(dropChance);
     }
 
+//-----SIMULATION UTILITY METHODS-----
     public void printSeparator(){
         LocalDateTime now = LocalDateTime.now();
 
