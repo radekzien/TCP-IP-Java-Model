@@ -112,9 +112,11 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
 
     public void sendPacket() throws IOException{
         Packet pac = outBuffer.poll();
-        transport.sendPacket(pac);
-        config.printSeparator();
-        System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
+        if(pac != null){
+            transport.sendPacket(pac);
+            config.printSeparator();
+            System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
+        }
     }
 
 //----- RUNNING METHODS -----
