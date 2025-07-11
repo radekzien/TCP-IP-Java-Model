@@ -72,7 +72,7 @@ public class ResponseListener extends Thread {
                                 }
                             } else {
                                 config.printSeparator();
-                                System.out.println("Invalid checksum from " + packet.srcIP);
+                                System.out.println("Invalid checksum from " + packet.srcIP + ". Expected " + packet.checksum + " Received " + packet.computeChecksum());
                             }
 
                         //-----HANDLE TCP_ACK PACKETS-----  
