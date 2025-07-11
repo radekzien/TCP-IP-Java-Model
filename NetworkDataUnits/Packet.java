@@ -5,14 +5,19 @@ import java.util.Objects;
 import NetworkUtils.Protocols;
 
 public class Packet implements Serializable{
+//-----VARIABLES-----
+    //Header
     public String srcIP;
     public String destIP;
     public Protocols protocol;
     public int seqNum;
     public int ackNum;
     public int checksum;
+
+    //Payload
     Segment payload;
 
+//-----CONSTRUCTOR-----
     public Packet(String src, String dest, Protocols protocol, int seqNum, int ackNum, Segment seg){
         this.srcIP = src;
         this.destIP = dest;
@@ -22,6 +27,7 @@ public class Packet implements Serializable{
         this.ackNum = ackNum;
     }
 
+//-----------
     public Segment getPayload(){
         return payload;
     }
@@ -69,7 +75,7 @@ public class Packet implements Serializable{
         return Objects.hash(destIP,seqNum);
     }
 
-    //Copy constructor for error simulation
+    //Constructor for copy intended for error simulation
     public Packet(Packet original) {
         this.srcIP = original.srcIP;
         this.destIP = original.destIP;
