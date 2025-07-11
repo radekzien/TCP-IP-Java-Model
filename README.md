@@ -30,6 +30,8 @@ These variables are as follows:
 
 6. dropChance - This is a DOUBLE value which determines the chances of TCP packets being dropped in order to simulate packet loss. This value must be 0<= and >1. For NO packet loss simulation change this value to 0. The default is 0.2 (20% chance of loss)
 
+7. threadAmount - This is an INTEGER value which determines the size of the threadpool which handles retransmissions. These threadpools are created PER CLIENT. So any tests where a larger amount of clients is ran will ideally need to see this number reduced as it will have an affect on performance. A result of this, however, may be that retransmissions are handled slower as only the threadAmount of transmissions can be handled concurrently while the rest of them wait in queue. This value must be >=1. The default is 4.
+
 ## ----- RUNNING THE PROJECT -----
 This is how you run the project. For each router and client instance, you will need a new terminal window. Windows command line or powershell will be fine.
 1. IN TERMINAL, ENTER THE PROJECT DIRECTORY e.g. 'cd C:\Users\User\TCP-IP-Java-Model'
