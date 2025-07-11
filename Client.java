@@ -254,12 +254,33 @@ public class Client  implements ClientCallback{
         Set<String> removedIPs = new HashSet<>(oldIPs);
         removedIPs.removeAll(newIPs);
 
+        Set<String> addedIPs = new HashSet<>(newIPs);
+        addedIPs.removeAll(oldIPs);
+
         if(!removedIPs.isEmpty()){
-            for(String ip : removedIPs){
-                clientGUI.clearHistory(ip);
-                resetTCP(ip);
+            for (String clientIP : removedIPs) {
+                if(clientIP == this.ip){
+                    continue;
+                }
+                removeState(clientIP);
             }
         }
+
+        if (!addedIPs.isEmpty()) {
+            for (String clientIP : addedIPs) {
+                if(clientIP == this.ip){
+                    continue;
+                }
+                removeState(clientIP);
+            }
+        }
+    }
+
+    public void removeState(String ip){
+        if(clientGUI != null){
+            clientGUI.clearHistory(ip);
+        }
+        resetTCP(ip);
     }
 
 // ----- TCP UTILS -----
