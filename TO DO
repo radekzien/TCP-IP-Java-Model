@@ -1,6 +1,3 @@
-IMPLEMENT TCP
-- Possible edge case: What happens to tracked seqnums if a new client adopts a previously used IP?
-
 CLEAN UP
 - Improve readbability
 - Improve comments
