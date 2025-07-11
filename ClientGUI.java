@@ -41,6 +41,8 @@ public class ClientGUI extends JFrame{
 // ----- CHAT HISTORY COMPONENTS -----
     private final Map<String, StringBuilder> chatHistories = new ConcurrentHashMap<>();
 
+
+//----- CONSTRUCTOR METHOD -----
     public ClientGUI(Client client) {
         this.client = client;
 
@@ -67,6 +69,7 @@ public class ClientGUI extends JFrame{
         setVisible(true);
     }
 
+// ------ INITIALISING PANELS -----
     private void initClientListPanel(){
         JPanel panel = new JPanel(new BorderLayout());
 
@@ -124,6 +127,7 @@ public class ClientGUI extends JFrame{
         cards.add(panel, CHAT_PANEL);
     }
 
+//----- PANEL CONTENT -----
     private void openChat(String ip, String hostName){
         currentChatIP = ip;
         String currentHostName = hostName;
@@ -146,9 +150,20 @@ public class ClientGUI extends JFrame{
         cl.show(cards, CLIENT_LIST);
     }
 
+    public void updateClientList(ConcurrentMap<String, String> connectionList){
+        SwingUtilities.invokeLater(() -> {
+            clientListModel.clear();
+            for(Map.Entry<String, String> entry : connectionList.entrySet()){
+                if(!entry.getKey().equals(client.ip)){
+                    clientListModel.addElement(entry.getValue() + " [" + entry.getKey() + "]");
+                }
+            }
+        });
+    }
+
+// ----- MESSAGING -----
     private void sendMessage(){
         String msg = inputField.getText().trim();
-        String hostName = client.getConnectionList().getOrDefault(currentChatIP, currentChatIP);
 
         if(msg.isEmpty()){
             return;
@@ -164,16 +179,6 @@ public class ClientGUI extends JFrame{
         inputField.setText("");
     }
 
-    public void updateClientList(ConcurrentMap<String, String> connectionList){
-        SwingUtilities.invokeLater(() -> {
-            clientListModel.clear();
-            for(Map.Entry<String, String> entry : connectionList.entrySet()){
-                if(!entry.getKey().equals(client.ip)){
-                    clientListModel.addElement(entry.getValue() + " [" + entry.getKey() + "]");
-                }
-            }
-        });
-    }
 
     public void sendingError(String errorMessage){
         chat.append("ERROR: THERE HAS BEEN AN ISSUE SENDING THE MESSAGE (" + errorMessage + ")\n");
