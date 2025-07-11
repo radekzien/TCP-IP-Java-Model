@@ -12,36 +12,36 @@ import SimUtils.*;
 import NetworkUtils.*;
 
 public class Client  implements ClientCallback{
+//-----SIMULATION VARIABLES-----
     static SimConfig config = new SimConfig();
     ErrorSim errorSim = new ErrorSim();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4); //Look into configurable pool size
-//----- VARIABLES -----
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(config.getThreadAmount());
+
+//-----VARIABLES-----
+//Identifiers
     String hostName;
-    String ip = "0.0.0.0";
+    String ip = "0.0.0.0"; //Initial IP pre-DHCP
     String mac;
 
-    String destIP; //Hardcoded for now
-    String destMAC;
-
-    String message;
-
+//Router Information
     String routerHost;
     int routerPort;
-
     String routerIP = "";
 
+//Assisitng variables
     private Socket socket;
     private ObjectOutputStream out;
     private ResponseListener listener;
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
+//GUI
     ClientGUI clientGUI;
 
-//TCP VARIABLES
-    ConcurrentHashMap<String, Integer> sendSeqs = new ConcurrentHashMap<>(); 
-    ConcurrentHashMap<String, Integer> expSeqs = new ConcurrentHashMap<>(); 
-    ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>();
-    ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>();
+//-----TCP VARIABLES-----
+    ConcurrentHashMap<String, Integer> sendSeqs = new ConcurrentHashMap<>(); //Tracks the seqNums that are going to be sent
+    ConcurrentHashMap<String, Integer> expSeqs = new ConcurrentHashMap<>();  //Tracks expected seqNums
+    ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>(); //Tracks expected ackNums
+    ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>(); //Tracks which packets are in transit (for retransmission)
     final int maxRetries = 3;
     final int retryIntervalSeconds = 2;
 
@@ -70,7 +70,6 @@ public class Client  implements ClientCallback{
     public Client (String hostName, String mac, String destIP, String routerHost, int routerPort){
         this.hostName = hostName;
         this.mac = mac;
-        this.destIP = destIP;
         this.routerHost = routerHost;
         this.routerPort = routerPort;
         
@@ -96,26 +95,35 @@ public class Client  implements ClientCallback{
         }
     }
 
-// ----- MESSAGING AND MESSAGE HANDLING -----
+// ----- SENDING OUTGOING PACKETS -----
     public void sendTCP(String msg, String destIP){
+        //Create TCP Segment
         Segment seg = new Segment(ip, destIP);
         seg.addPayload(msg);
         sendSeqs.putIfAbsent(destIP, 0);
         int sendSeq = sendSeqs.get(destIP);
 
-        //Send TCP
+        //Create TCP Packet
         Packet pac = new Packet(ip, destIP, Protocols.TCP, sendSeq, -1, seg);
         pac.assignChecksum();
+
+        //Expect the TCP_ACK for the packet being sent
         expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
         expectedACKs.get(destIP).add(sendSeq);
         
+        //Create retransmit task
         RetransmitTask task = new RetransmitTask(pac, destIP);
 
+        //Update seqNum for next message to this IP address
         updateSendSeq(destIP);
+
+        //Schedule retransmit task in case failure
         ScheduledFuture<?> future = scheduler.schedule(task, retryIntervalSeconds, TimeUnit.SECONDS);
-        inTransit.put(pac, future);
+        inTransit.put(pac, future); //Tracks packet - at this point the client believes the packet has been sent
+
         Packet finalPac = errorSim.addError(pac); //Adds chance of a corrupted packet
 
+        //Simulate packet loss or send packet
         if(!errorSim.isDropped()){
             sendToRouter(finalPac);
         } else {
@@ -148,6 +156,8 @@ public class Client  implements ClientCallback{
         }
     }
 
+
+//----- HANDLING INCOMING PACKETS -----
     @Override
     public void processTCP(Packet packet){
         sendToApp(packet.srcIP, packet.getPayload().getPayload());
@@ -212,11 +222,11 @@ public class Client  implements ClientCallback{
         if(message instanceof String){
             clientGUI.receiveMessage(ip, (String) message);
         } else {
-            return; //Handle this somehow
+            clientGUI.sendingError("Couldn't handle message");
         }
     }
 
-//----- CLIENT SYSTEM -----
+//----- CONNECTIONS LIST -----
     @Override
     public void onClientListUpdated(ConcurrentMap<String, String> newList) {
         handleDisconnectedClients(newList);
@@ -252,7 +262,7 @@ public class Client  implements ClientCallback{
         }
     }
 
-//-----TCP UTILS-----
+// ----- TCP UTILS -----
     public void updateSendSeq(String destIP){
         int sendSeq = sendSeqs.get(destIP);
         sendSeq = (sendSeq + 1) % 5;

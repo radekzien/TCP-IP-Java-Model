@@ -13,6 +13,7 @@ public class SimConfig {
     public static double errorChance = 0.1; //DOUBLE: Chance of corrupted packet DEFAULT = 0.1
     public static double dropChance = 0.2; //DOUBLE: Chance of dropped packet AKA packet lost in transmission DEFAULT = 0.2
     public boolean printPackets = true; //BOOLEAN: Prints packet details in terminal DEFAULT = true
+    public int threadAmount = 4; //INTEGER: Determines the thread pool size for retransmission. DEFAULT = 4. NOTE: If you are planning to run tests using many clients, you may wish to decrease this number to maintain performance. More detail in README.md
 
 //-----GETTER METHODS-----
     public String getHost(){
@@ -37,6 +38,10 @@ public class SimConfig {
 
     public double getDropChance(){
         return(dropChance);
+    }
+
+    public int getThreadAmount(){
+        return(threadAmount);
     }
 
 //-----SIMULATION UTILITY METHODS-----
