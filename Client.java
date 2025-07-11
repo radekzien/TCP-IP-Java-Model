@@ -12,36 +12,36 @@ import SimUtils.*;
 import NetworkUtils.*;
 
 public class Client  implements ClientCallback{
+//-----SIMULATION VARIABLES-----
     static SimConfig config = new SimConfig();
     ErrorSim errorSim = new ErrorSim();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4); //Look into configurable pool size
-//----- VARIABLES -----
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(config.getThreadAmount());
+
+//-----VARIABLES-----
+//Identifiers
     String hostName;
-    String ip = "0.0.0.0";
+    String ip = "0.0.0.0"; //Initial IP pre-DHCP
     String mac;
 
-    String destIP; //Hardcoded for now
-    String destMAC;
-
-    String message;
-
+//Router Information
     String routerHost;
     int routerPort;
-
     String routerIP = "";
 
+//Assisitng variables
     private Socket socket;
     private ObjectOutputStream out;
     private ResponseListener listener;
     private ConcurrentMap<String, String> connectionList = new ConcurrentHashMap<>();
 
+//GUI
     ClientGUI clientGUI;
 
-//TCP VARIABLES
-    ConcurrentHashMap<String, Integer> sendSeqs = new ConcurrentHashMap<>(); 
-    ConcurrentHashMap<String, Integer> expSeqs = new ConcurrentHashMap<>(); 
-    ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>();
-    ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>();
+//-----TCP VARIABLES-----
+    ConcurrentHashMap<String, Integer> sendSeqs = new ConcurrentHashMap<>(); //Tracks the seqNums that are going to be sent
+    ConcurrentHashMap<String, Integer> expSeqs = new ConcurrentHashMap<>();  //Tracks expected seqNums
+    ConcurrentHashMap<String, Set<Integer>> expectedACKs = new ConcurrentHashMap<>(); //Tracks expected ackNums
+    ConcurrentMap<Packet, ScheduledFuture<?>> inTransit = new ConcurrentHashMap<>(); //Tracks which packets are in transit (for retransmission)
     final int maxRetries = 3;
     final int retryIntervalSeconds = 2;
 
@@ -64,16 +64,12 @@ public class Client  implements ClientCallback{
         int routerPort = config.getPort();
 
         Client client = new Client(hostName, mac, "0.0.0.0", routerHost, routerPort);
-
-        System.out.println("Starting Client " + hostName + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
-        config.printSeparator();
     }
 
 //----- CONSTRUCTOR -----
     public Client (String hostName, String mac, String destIP, String routerHost, int routerPort){
         this.hostName = hostName;
         this.mac = mac;
-        this.destIP = destIP;
         this.routerHost = routerHost;
         this.routerPort = routerPort;
         
@@ -90,59 +86,78 @@ public class Client  implements ClientCallback{
             Packet pac = new Packet(ip, "255.255.255.255", Protocols.DHCP, -1, -1, seg);
             pac.assignChecksum();
 
-            out.writeObject(pac);
-            out.flush();
+            sendToRouter(pac);
 
         } catch (IOException e){
-            System.out.println("Client " + ip + " failed to connect to router: " + e.getMessage());
+            config.printSeparator();
+            System.out.println("Failed to connect to router: ");
+            System.out.println("    " + e.getMessage());
         }
     }
 
-// ----- MESSAGING AND MESSAGE HANDLING -----
+// ----- SENDING OUTGOING PACKETS -----
     public void sendTCP(String msg, String destIP){
+        //Create TCP Segment
         Segment seg = new Segment(ip, destIP);
         seg.addPayload(msg);
         sendSeqs.putIfAbsent(destIP, 0);
         int sendSeq = sendSeqs.get(destIP);
 
-        //Send TCP
+        //Create TCP Packet
         Packet pac = new Packet(ip, destIP, Protocols.TCP, sendSeq, -1, seg);
         pac.assignChecksum();
+
+        //Expect the TCP_ACK for the packet being sent
         expectedACKs.putIfAbsent(destIP, ConcurrentHashMap.newKeySet());
         expectedACKs.get(destIP).add(sendSeq);
         
+        //Create retransmit task
         RetransmitTask task = new RetransmitTask(pac, destIP);
 
+        //Update seqNum for next message to this IP address
         updateSendSeq(destIP);
+
+        //Schedule retransmit task in case failure
         ScheduledFuture<?> future = scheduler.schedule(task, retryIntervalSeconds, TimeUnit.SECONDS);
-        inTransit.put(pac, future);
+        inTransit.put(pac, future); //Tracks packet - at this point the client believes the packet has been sent
+
         Packet finalPac = errorSim.addError(pac); //Adds chance of a corrupted packet
 
-        sendToRouter(finalPac);
+        //Simulate packet loss or send packet
+        if(!errorSim.isDropped()){
+            sendToRouter(finalPac);
+        } else {
+            config.printSeparator();
+            System.out.println(":::Simulation message: Packet dropped:::");
+        }
     }
 
     public void sendToRouter(Packet pac){
         if (socket == null || socket.isClosed()) {
+            config.printSeparator();
             System.out.println("Cannot send: socket is closed");
             return;
         }
         try{
+            config.printSeparator();
+            System.out.println("Sending " + pac.protocol + " packet...");
             out.writeObject(pac);
-            if(pac.getPayload().getPayload() instanceof String){
-                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
-            } else {
-                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol);
+            if(config.printPackets){
+                System.out.println(pac.toString());
             }
-             config.printSeparator();
+
             out.flush();
            
             
         } catch (IOException e){
             e.printStackTrace();
+            config.printSeparator();
             System.out.println("Failed to communicate with router");
         }
     }
 
+
+//----- HANDLING INCOMING PACKETS -----
     @Override
     public void processTCP(Packet packet){
         sendToApp(packet.srcIP, packet.getPayload().getPayload());
@@ -150,8 +165,7 @@ public class Client  implements ClientCallback{
         Segment ackSeg = new Segment(getIP(), packet.srcIP);
         Packet ackPac = new Packet(getIP(), packet.srcIP, Protocols.TCP_ACK, -1, packet.seqNum, ackSeg);
         ackPac.assignChecksum();
-        Packet finalAck = errorSim.addError(ackPac);
-        sendToRouter(finalAck);
+        sendToRouter(ackPac);
     }
 
     @Override
@@ -172,13 +186,34 @@ public class Client  implements ClientCallback{
 
         @Override
     public void processDHCP(Packet packet){
-        Segment seg = packet.getPayload();
-        Object payload = seg.getPayload();
-        routerIP = packet.srcIP;
-        if(payload instanceof String){
-            ip = (String) payload;
-            SwingUtilities.invokeLater(() -> clientGUI = new ClientGUI(this));
+        if(packet.protocol == Protocols.DHCP_ACK){
+            Segment seg = packet.getPayload();
+            Object payload = seg.getPayload();
+            routerIP = packet.srcIP;
+            if(payload instanceof String){
+                ip = (String) payload;
+                SwingUtilities.invokeLater(() -> clientGUI = new ClientGUI(this));
+
+                config.printSeparator();
+                System.out.println("Starting Client " + hostName + "\nIP: " + ip + "\nMAC: " + mac + "\nrouterHost: " + routerHost + "\nrouterPort: " + Integer.toString(routerPort));
+            }
+        } else {
+            config.printSeparator();
+            System.out.println("NO IPs AVAILABLE. PLEASE TRY AGAIN.");
+            System.out.println("Exiting...");
+                        if(scheduler != null){
+                scheduler.shutdown();
+            }
+            if(listener != null){
+                listener.shutdown();
+            }
+            try {   
+                socket.close();
+            } catch (IOException e){
+                e.printStackTrace();
+            }
         }
+
 
     }
 
@@ -187,21 +222,22 @@ public class Client  implements ClientCallback{
         if(message instanceof String){
             clientGUI.receiveMessage(ip, (String) message);
         } else {
-            return; //Handle this somehow
+            clientGUI.sendingError("Couldn't handle message");
         }
     }
 
-//----- CLIENT SYSTEM -----
+//----- CONNECTIONS LIST -----
     @Override
     public void onClientListUpdated(ConcurrentMap<String, String> newList) {
+        handleDisconnectedClients(newList);
         connectionList.clear();
         connectionList.putAll(newList);
+        config.printSeparator();
         System.out.println(hostName + " updated connection list:");
         connectionList.forEach((ip, name) ->
             System.out.println(" - " + ip + " (" + name + ")")
             
         );
-        config.printSeparator();
         if(clientGUI != null){
             clientGUI.updateClientList(newList);
         }
@@ -211,7 +247,43 @@ public class Client  implements ClientCallback{
         return(connectionList);
     }
 
-//-----TCP UTILS-----
+    public void handleDisconnectedClients(ConcurrentMap<String, String> newList) {
+        Set<String> oldIPs = new HashSet<>(connectionList.keySet());
+        Set<String> newIPs = new HashSet<>(newList.keySet());
+
+        Set<String> removedIPs = new HashSet<>(oldIPs);
+        removedIPs.removeAll(newIPs);
+
+        Set<String> addedIPs = new HashSet<>(newIPs);
+        addedIPs.removeAll(oldIPs);
+
+        if(!removedIPs.isEmpty()){
+            for (String clientIP : removedIPs) {
+                if(clientIP == this.ip){
+                    continue;
+                }
+                removeState(clientIP);
+            }
+        }
+
+        if (!addedIPs.isEmpty()) {
+            for (String clientIP : addedIPs) {
+                if(clientIP == this.ip){
+                    continue;
+                }
+                removeState(clientIP);
+            }
+        }
+    }
+
+    public void removeState(String ip){
+        if(clientGUI != null){
+            clientGUI.clearHistory(ip);
+        }
+        resetTCP(ip);
+    }
+
+// ----- TCP UTILS -----
     public void updateSendSeq(String destIP){
         int sendSeq = sendSeqs.get(destIP);
         sendSeq = (sendSeq + 1) % 5;
@@ -253,12 +325,14 @@ public class Client  implements ClientCallback{
             Set<Integer> expected = expectedACKs.get(destIP);
             if (expected != null && expected.contains(packet.seqNum)) {
                 if (retries < maxRetries) {
+                    config.printSeparator();
                     System.out.println("Retransmitting packet with seq " + packet.seqNum + " to " + destIP + " (retry #" + (retries+1) + ")");
                     sendToRouter(packet);
                     retries++;
                     ScheduledFuture<?> future = scheduler.schedule(this, retryIntervalSeconds, TimeUnit.SECONDS);
                     inTransit.put(packet, future);
                 } else {
+                    config.printSeparator();
                     System.out.println("Max retries reached for packet seq " + packet.seqNum + ". Giving up.");
                     expected.remove(packet.seqNum);
                     inTransit.remove(packet);
@@ -272,6 +346,12 @@ public class Client  implements ClientCallback{
         }
     }
 
+    public void resetTCP(String ip){
+        expectedACKs.remove(ip);
+        sendSeqs.remove(ip);
+        expSeqs.remove(ip);
+    }
+
 //----- DISCONNECTION -----
     public void close() {
         try {
@@ -280,8 +360,10 @@ public class Client  implements ClientCallback{
                 seg.addPayload("DISCONNECT");
                 Packet pac = new Packet(ip, routerIP, Protocols.DISCONNECT, -1, -1, seg);
                 pac.assignChecksum();
-                System.out.println("Sent Packet: \nSender IP: " + pac.srcIP + "\n" + "Destination IP: " + pac.destIP + "\n" +"Protocol: " + pac.protocol + "\n" + "Segment Payload: " + pac.getPayload().getPayload().toString());
-                config.printSeparator();
+                if(config.printPackets){
+                    config.printSeparator();
+                    System.out.println("Sent packet:\n" + pac.toString());
+                }
                 out.writeObject(pac);
                 out.flush();
 
@@ -293,8 +375,10 @@ public class Client  implements ClientCallback{
                     }
                 }
                 if(disconnectAckReceived){
+                    config.printSeparator();
                     System.out.println("DISCONNECT-ACK Recieved. Closing connection.");
                 } else {
+                    config.printSeparator();
                     System.out.println("DISCONNECT-ACK TIMEOUT. Closing connection anyway.");
                 }
 
@@ -310,6 +394,25 @@ public class Client  implements ClientCallback{
             e.printStackTrace();
         }
     }
+
+    public void handleRouterDisconnect(){
+        config.printSeparator();
+        System.out.println("Router Disconnected. Shutting down.");
+        System.out.println(":::RESTART TO RECONNECT:::");
+        if(scheduler != null){
+                scheduler.shutdown();
+            }
+        if(listener != null){
+            listener.shutdown();
+        }
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.exit(0);
+    }
+
 
     @Override
     public void onDisconnectACK() {

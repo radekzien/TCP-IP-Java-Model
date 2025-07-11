@@ -40,21 +40,14 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         router.start();
     }
 
-//----- INTERFACES AND HANDLERS -----
+//----- CLIENT CONNECTION -----
     @Override
     public void onClientRegister(String ip, ClientHandler handler, String hostName) {
         connectedClients.put(ip, handler);
         clientList.put(ip, hostName);
+        config.printSeparator();
         System.out.println("Registered client: " + ip);
-        config.printSeparator();
         broadcastConnectionsList();
-    }
-
-    @Override
-    public void onPacketReceived(Packet packet) {
-        System.out.println("Packet received from: " + packet.srcIP);
-        config.printSeparator();
-        inBuffer.offer(packet);
     }
 
     @Override
@@ -65,6 +58,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         clientList.remove(ip);
         if (addressSpace.containsKey(ip)) {
             addressSpace.put(ip, "");
+            config.printSeparator();
             System.out.println("Unassigned IP: " + ip);
         }
 
@@ -72,33 +66,57 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
                 if (handler != null && !handler.isInterrupted()) {
                     handler.interrupt();
                 }
-            } catch (Exception e) {
-                System.out.println("Error during handler interrupt: " + e.getMessage());
+            } catch (Exception e) {               
                 config.printSeparator();
+                System.out.println("Error during handler interrupt: " + e.getMessage());
             }
 
             System.out.println("Client disconnected: " + ip);
-            config.printSeparator();
             broadcastConnectionsList();
     }
 
     public void broadcastConnectionsList(){
-    for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
-        String CLIENT_IP = entry.getKey();
-        ClientHandler handler = entry.getValue();
+        for (Map.Entry<String, ClientHandler> entry : connectedClients.entrySet()) {
+            String CLIENT_IP = entry.getKey();
+            ClientHandler handler = entry.getValue();
 
-        if (handler == null) {
-            continue;
-        }
-        
-        Segment listSeg = new Segment(ip, CLIENT_IP);
-        listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
-        Packet packet = new Packet(ip, CLIENT_IP, Protocols.BCAST, -1, -1, listSeg);
-        packet.assignChecksum();
+            if (handler == null) {
+                continue;
+            }
+            
+            Segment listSeg = new Segment(ip, CLIENT_IP);
+            listSeg.addPayload(new ClientListPayload(new ConcurrentHashMap<>(clientList)));
+            Packet packet = new Packet(ip, CLIENT_IP, Protocols.BCAST, -1, -1, listSeg);
+            packet.assignChecksum();
 
-        handler.sendPacket(packet);
+            handler.sendPacket(packet);
+        }       
     }
-        
+
+//-----PACKET HANDLING-----
+    @Override
+    public void onPacketReceived(Packet packet) {
+        config.printSeparator();
+        System.out.println("Packet received from: " + packet.srcIP);
+        inBuffer.offer(packet);
+    }
+
+    public void switchPacket(){
+        Packet pac = inBuffer.poll();
+        if(pac != null && (pac.protocol == Protocols.TCP|| pac.protocol == Protocols.TCP_ACK)){
+            outBuffer.add(pac);
+            config.printSeparator();
+            System.out.println("Router switched packet from " + pac.srcIP + " to " + pac.destIP);
+        }
+    }
+
+    public void sendPacket() throws IOException{
+        Packet pac = outBuffer.poll();
+        if(pac != null){
+            transport.sendPacket(pac);
+            config.printSeparator();
+            System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
+        }
     }
 
 //----- RUNNING METHODS -----
@@ -107,8 +125,8 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
         createAddresses(config.getAmount());
         try{
             transport.start();
-            System.out.println("Router running on port: " + port);
             config.printSeparator();
+            System.out.println("Router running on port: " + port);  
             running = true;
             new Thread(this).start();
         } catch(Exception e){
@@ -131,21 +149,6 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
                 e.printStackTrace();
             }
         }
-    }
-
-    public void switchPacket(){ //Checks will be added later
-        Packet pac = inBuffer.poll();
-        if(pac != null && pac.protocol == Protocols.TCP|| pac.protocol == Protocols.TCP_ACK){
-            outBuffer.add(pac);
-            System.out.println("Router switched packet from " + pac.srcIP + " to " + pac.destIP);
-        }
-    }
-
-    public void sendPacket() throws IOException{
-        Packet pac = outBuffer.poll();
-        transport.sendPacket(pac);
-        System.out.println("Sent packet from " + pac.srcIP + " to " + pac.destIP);
-        config.printSeparator();
     }
 
     public void processBuffers(){
@@ -173,6 +176,7 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
             }
         } else {
             System.out.println("ERROR: addressAmount needs to be <= 255. Change config");
+            System.exit(0);
         }
 
     }
@@ -184,26 +188,28 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
             return entry.getKey();
         }
     }
-        return null; // Or throw an exception, or return Optional<String>
+        return null;
     }   
-
-    public String getRouterIP(){
-        return ip;
-    }
 
     public void handleDHCP(Packet packet, ClientHandler handler){
         Segment clientSegment = packet.getPayload();
         String clientOldIP = packet.srcIP;
         String clientNewIP = allocateAddress();
-        System.out.println(clientNewIP);
           if (clientNewIP == null) {
-            System.out.println("No IPs left in address space.");
             config.printSeparator();
+            System.out.println("No IPs left in address space.");
+
+            Segment returnSeg = new Segment(ip, clientOldIP);
+            returnSeg.addPayload("NO IP AVAILABLE");
+            Packet returnPac = new Packet(ip, clientOldIP, Protocols.DHCP_NACK, -1, -1, returnSeg);
+            returnPac.assignChecksum();
+            handler.sendPacket(returnPac);
+            handler.cleanup();
             return;
         }
         
         Object segmentPayload = clientSegment.getPayload();
-        if(segmentPayload instanceof String){
+        if(segmentPayload instanceof String && clientNewIP != null){
             String clientHostName = (String) segmentPayload;
             addressSpace.put(clientNewIP, clientHostName);
 
@@ -212,8 +218,8 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
                 handler.setClientIP(clientNewIP);
                 onClientRegister(clientNewIP, handler, clientHostName);
             } else {
-                System.out.println("Handler not found for DHCP request from " + clientOldIP);
                 config.printSeparator();
+                System.out.println("Handler not found for DHCP request from " + clientOldIP);
             }
 
 
@@ -223,6 +229,11 @@ public class Router implements Runnable, PacketProcessor, PacketListener {
             returnPac.assignChecksum();
             handler.sendPacket(returnPac);
         }
+    }
+
+//----- UTILITY METHODS -----
+    public String getRouterIP(){
+        return ip;
     }
 }
 

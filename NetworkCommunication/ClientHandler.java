@@ -2,13 +2,14 @@ package NetworkCommunication;
 import java.io.*;
 import java.net.Socket;
 
-import NetworkDataUnits.Packet;
-import NetworkDataUnits.Segment;
-import NetworkUtils.Protocols;
+import NetworkDataUnits.*;
+import NetworkUtils.*;
 import SimUtils.SimConfig;
 
 public class ClientHandler extends Thread {
-    SimConfig config = new SimConfig();
+//-----VARIABLES-----
+    SimConfig config = new SimConfig(); //Import config
+
     private Socket socket;
     private PacketProcessor processor;
     private ObjectOutputStream out;
@@ -16,11 +17,13 @@ public class ClientHandler extends Thread {
     private String clientIP;
     private boolean connected;
 
+//-----CONSTRUCTOR-----
     public ClientHandler(Socket socket, PacketProcessor processor) {
         this.socket = socket;
         this.processor = processor;
     }
 
+//-----RUNNING METHOD-----
     @Override
     public void run() {
         try {
@@ -34,6 +37,7 @@ public class ClientHandler extends Thread {
         }
     }
 
+//-----SOCKET AND CONNECTION-----
     private void initializeConnection() throws IOException {
         out = new ObjectOutputStream(socket.getOutputStream());
         out.flush();
@@ -41,6 +45,7 @@ public class ClientHandler extends Thread {
         connected = true;
     }
 
+//-----CLIENT METHODS-----
     public void setClientIP(String ip) {
         this.clientIP = ip;
     }
@@ -55,11 +60,10 @@ public class ClientHandler extends Thread {
         while (connected && !socket.isClosed()) {
             Object obj = in.readObject();
             if (obj instanceof Packet packet) {
-                if(packet.protocol == Protocols.DHCP){
+                if(packet.protocol == Protocols.DHCP){//For connecting clients
                     processor.handleDHCP(packet, this);
-                } else if(packet.protocol == Protocols.DISCONNECT){
+                } else if(packet.protocol == Protocols.DISCONNECT){//For disconnecting clients
                     System.out.println("Received DISCONNECT packet from " + clientIP);
-                    config.printSeparator();
 
                     Segment ackSeg = new Segment(processor.getRouterIP(), clientIP);
                     Packet ackPacket = new Packet(processor.getRouterIP(), clientIP, Protocols.DISCONNECT_ACK, -1, -1, ackSeg);
@@ -68,7 +72,7 @@ public class ClientHandler extends Thread {
 
                     break;
                 } else{ 
-                    processor.onPacketReceived(packet);
+                    processor.onPacketReceived(packet); //Handles other packets not for the router
                 }
             }
         }
@@ -80,11 +84,12 @@ public class ClientHandler extends Thread {
             out.writeObject(pac);
             out.flush();
         } catch (IOException e) {
-            System.out.println("Failed to send packet to " + clientIP);
             config.printSeparator();
+            System.out.println("Failed to send packet to " + clientIP);
         }
     }
 
+//-----UTILS-----
     public void cleanup() {
         try {
             if (clientIP != null) {
@@ -94,8 +99,8 @@ public class ClientHandler extends Thread {
                 socket.close();
             }
         } catch (IOException e) {
-            System.out.println("Error closing client connection: " + clientIP);
             config.printSeparator();
+            System.out.println("Error closing client connection: " + clientIP);
         }
     }
 }
