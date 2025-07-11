@@ -11,12 +11,15 @@ import NetworkUtils.Protocols;
 import SimUtils.SimConfig;
 
 public class ResponseListener extends Thread {
+//-----VARIABLES-----
     SimConfig config = new SimConfig();
+
     private Socket socket;
     private ObjectInputStream in;
     private boolean running = true;
     private ClientCallback callback;
 
+//-----CONSTRUCTOR AND RUNNING METHOD-----
     public ResponseListener(Socket socket, ClientCallback callback){
         this.socket = socket;
         this.callback = callback;
@@ -40,6 +43,8 @@ public class ResponseListener extends Thread {
                         if(config.printPackets){
                             System.out.println(packet.toString());
                         }
+
+                        //-----HANDLE BCAST PACKETS-----
                         if(packet.protocol == Protocols.BCAST){
                             Segment resSeg = packet.getPayload();
                             Object payload = resSeg.getPayload();
@@ -47,15 +52,19 @@ public class ResponseListener extends Thread {
                             if(payload instanceof ClientListPayload clientList){
                                 callback.onClientListUpdated(clientList.getClientList());
                             }
+
+                        //-----HANDLE DHCP_ACK/_NACK PACKETS-----
                         } else if(packet.protocol == Protocols.DHCP_ACK || packet.protocol == Protocols.DHCP_NACK){
                             callback.processDHCP(packet);
                         } else if(packet.protocol == Protocols.DISCONNECT_ACK){
                                 config.printSeparator();
                                 System.out.println("Received DISCONNECT-ACK from " + packet.srcIP);
                                 callback.onDisconnectACK();
+                        
+                        //-----HANDLE TCP PACKETS-----
                         } else if (packet.protocol == Protocols.TCP){
-                            if(packet.checksum == packet.computeChecksum()){
-                                if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){
+                            if(packet.checksum == packet.computeChecksum()){//Compute checksum
+                                if(packet.seqNum == callback.getExpSeqNum(packet.srcIP)){//Check Seqnum
                                     callback.processTCP(packet);
                                 } else {
                                     config.printSeparator();
@@ -65,6 +74,8 @@ public class ResponseListener extends Thread {
                                 config.printSeparator();
                                 System.out.println("Invalid checksum from " + packet.srcIP);
                             }
+
+                        //-----HANDLE TCP_ACK PACKETS-----  
                         } else if(packet.protocol == Protocols.TCP_ACK){
                             if(packet.checksum == packet.computeChecksum()){
                                 callback.processTCPACK(packet);
@@ -74,6 +85,8 @@ public class ResponseListener extends Thread {
                             }
                         }
                     }
+
+                    
                 } catch (EOFException e) {
                     config.printSeparator();
                     System.out.println("Connection closed by router");
@@ -87,6 +100,8 @@ public class ResponseListener extends Thread {
             }
         }
     }
+
+//-----UTILS-----
     public void shutdown(){
         try {
             running = false;
