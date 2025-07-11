@@ -11,7 +11,9 @@ import NetworkDataUnits.Packet;
 import SimUtils.SimConfig;
 
 public class SocketServerTransport implements NetworkTransport{
+//-----VARIABLES-----
     SimConfig config = new SimConfig();
+
     private ServerSocket serverSocket;
     private PacketListener listener;
     private PacketProcessor processor;
@@ -21,12 +23,14 @@ public class SocketServerTransport implements NetworkTransport{
 
     private int port;
 
+//-----CONSTRUCTOR-----
     public SocketServerTransport(int port, PacketProcessor processor, ConcurrentMap<String, ClientHandler> clients){
         this.port = port;
         this.processor = processor;
         this.clients = clients;
     }
 
+//-----RUNNING AND STOP METHODS-----
     @Override
     public void start() throws IOException{
         serverSocket = new ServerSocket(port);
@@ -47,6 +51,16 @@ public class SocketServerTransport implements NetworkTransport{
         }).start();
     }
 
+        @Override
+    public void stop() throws IOException {
+        running = false;
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocket.close();
+        }
+    }
+
+
+//-----PACKET AND CLIENT METHODS-----
     @Override
     public void sendPacket(Packet packet) throws IOException {
         String destIP = packet.destIP;
@@ -59,13 +73,7 @@ public class SocketServerTransport implements NetworkTransport{
         }
     }
 
-    @Override
-    public void stop() throws IOException {
-        running = false;
-        if (serverSocket != null && !serverSocket.isClosed()) {
-            serverSocket.close();
-        }
-    }
+
 
     @Override
     public void setPacketListener(PacketListener listener) {
