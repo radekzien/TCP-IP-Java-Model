@@ -196,4 +196,8 @@ public class ClientGUI extends JFrame{
                 .append(": ").append(msg).append("\n");
         }
     }
+
+    public void clearHistory(String ip){
+        chatHistories.remove(ip);
+    }
 }

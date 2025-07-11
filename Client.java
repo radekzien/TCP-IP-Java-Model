@@ -219,6 +219,7 @@ public class Client  implements ClientCallback{
 //----- CLIENT SYSTEM -----
     @Override
     public void onClientListUpdated(ConcurrentMap<String, String> newList) {
+        handleDisconnectedClients(newList);
         connectionList.clear();
         connectionList.putAll(newList);
         config.printSeparator();
@@ -234,6 +235,21 @@ public class Client  implements ClientCallback{
 
     public ConcurrentMap<String, String> getConnectionList(){
         return(connectionList);
+    }
+
+    public void handleDisconnectedClients(ConcurrentMap<String, String> newList) {
+        Set<String> oldIPs = new HashSet<>(connectionList.keySet());
+        Set<String> newIPs = new HashSet<>(newList.keySet());
+
+        Set<String> removedIPs = new HashSet<>(oldIPs);
+        removedIPs.removeAll(newIPs);
+
+        if(!removedIPs.isEmpty()){
+            for(String ip : removedIPs){
+                clientGUI.clearHistory(ip);
+                resetTCP(ip);
+            }
+        }
     }
 
 //-----TCP UTILS-----
@@ -297,6 +313,12 @@ public class Client  implements ClientCallback{
                 if (future != null) future.cancel(false);
             }
         }
+    }
+
+    public void resetTCP(String ip){
+        expectedACKs.remove(ip);
+        sendSeqs.remove(ip);
+        expSeqs.remove(ip);
     }
 
 //----- DISCONNECTION -----
