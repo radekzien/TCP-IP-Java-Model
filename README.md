@@ -86,6 +86,6 @@ At the minute this project will be put on a back burner.
 In the future I would like to make this project easier to use for less technically-skilled users.  This will include creating an executable file with a ‘Master GUI’ which will essentially allow the user to control their network and see how it works without having to go into the terminal. I feel like if done right, this can become a very useful educational tool to introduce the concept of TCP communication.
 
 ## Contact
-@radekzien on github
+GitHub - @radekzien
 
-https://www.linkedin.com/in/radoslaw-zienkiewicz/
+LinkedIn - https://www.linkedin.com/in/radoslaw-zienkiewicz/
