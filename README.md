@@ -1,4 +1,5 @@
 # TCP-IP-Java-Model
+*Version 1.0.0 — Last updated: July 13, 2025*
 ## Sections
 - [Introduction](#introduction)
 - [Background](#background)
