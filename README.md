@@ -37,28 +37,30 @@ IF YOU'RE READING THIS FROM GITHUB, FOLLOW THESE STEPS. OTHERWISE SKIP TO 'RUNNI
 1. Click the green '<> Code' Button on the top right.
 2. Press 'Download as ZIP'
 3. Unzip the file
+
+Alternatively, fork and clone the repo onto your own machine.
         
 Et voila! If you wish to configure the project to satisfy your needs, read the section below.
 
 
 ## Configuration
-You can find Configuration in \TCP-IP-JAVA-MODEL\SimUtils\SimConfig.java Here you will find different variables which you can change that can change the behaviour project-wide. These variables are as follows:
+You can find Configuration in `\TCP-IP-JAVA-MODEL\SimUtils\SimConfig.java` Here you will find different variables which you can change that can change the behaviour project-wide. These variables are as follows:
 
-1. addressAmount - This is an INTEGER value. This determines how many times the loop in Router.createAddresses will run. The value cannot be higher than 254 (Not 255 because the router takes up address space x.x.x.1). It is recommended to keep this value at a reasonable number i.e. a number that suits your testing needs. The default value is 4.
-2. routerHost - This is a STRING value which determines the host in which the Router object actually runs. By default it is "0.0.00". If this is causing issues, try changing the host to 'localhost'.
-3. routerPort - This is an INTEGER value which determines the port which the router object uses for Socket communication. By default it is 12345
-4. networkIP - This is a STRING value which determines the SIMULATED network IP prefix. This will affect the IPs assigned to the clients during the DHCP process and the IPs shown throughout the simulation.
-5. errorChance - This is a DOUBLE value which determines the chances of TCP packets being corrupted. This value must be 0<= and >1. For NO error simulation, change this value to 0. The default value is 0.1 (10% chance of corruption.)
-6. dropChance - This is a DOUBLE value which determines the chances of TCP packets being dropped in order to simulate packet loss. This value must be 0<= and >1. For NO packet loss simulation change this value to 0. The default is 0.2 (20% chance of loss)
-7. threadAmount - This is an INTEGER value which determines the size of the threadpool which handles retransmissions. These threadpools are created PER CLIENT. So any tests where a larger amount of clients is ran will ideally need to see this number reduced as it will have an affect on performance. A result of this, however, may be that retransmissions are handled slower as only the threadAmount of transmissions can be handled concurrently while the rest of them wait in queue. This value must be >=1. The default is 4.
+1. `addressAmount` - This is an INTEGER value. This determines how many times the loop in Router.createAddresses will run. The value cannot be higher than 254 (Not 255 because the router takes up address space x.x.x.1). It is recommended to keep this value at a reasonable number i.e. a number that suits your testing needs. The default value is 4.
+2. `routerHost` - This is a STRING value which determines the host in which the Router object actually runs. By default it is "0.0.00". If this is causing issues, try changing the host to 'localhost'.
+3. `routerPort` - This is an INTEGER value which determines the port which the router object uses for Socket communication. By default it is 12345
+4. `networkIP` - This is a STRING value which determines the SIMULATED network IP prefix. This will affect the IPs assigned to the clients during the DHCP process and the IPs shown throughout the simulation.
+5. `errorChance` - This is a DOUBLE value which determines the chances of TCP packets being corrupted. This value must be 0<= and >1. For NO error simulation, change this value to 0. The default value is 0.1 (10% chance of corruption.)
+6. `dropChance` - This is a DOUBLE value which determines the chances of TCP packets being dropped in order to simulate packet loss. This value must be 0<= and >1. For NO packet loss simulation change this value to 0. The default is 0.2 (20% chance of loss)
+7. `threadAmount` - This is an INTEGER value which determines the size of the threadpool which handles retransmissions. These threadpools are created PER CLIENT. So any tests where a larger amount of clients is ran will ideally need to see this number reduced as it will have an affect on performance. A result of this, however, may be that retransmissions are handled slower as only the threadAmount of transmissions can be handled concurrently while the rest of them wait in queue. This value must be >=1. The default is 4.
 
 
 ## Running The Project
 This is how you run the project. For each router and client instance, you will need a new terminal window. Windows command line or powershell will be fine.
-1. IN TERMINAL, ENTER THE PROJECT DIRECTORY e.g. 'cd C:\Users\User\TCP-IP-Java-Model'
-2. COMPILE ALL THE FILES VIA 'javac *.java'
-3. START THE ROUTER VIA 'java Router' (case sensitive)
-4. OPEN A NEW TERMINAL WINDOW, MAKE SURE YOU ARE IN THE PROJECT DIRECTORY, START A CLIENT VIA 'java Client [hostname]' where [hostname] is the you wish to give this particular client. E.G. 'java Client Alice' or 'java Client Bob'.
+1. IN TERMINAL, ENTER THE PROJECT DIRECTORY e.g. `cd C:\Users\User\TCP-IP-Java-Model`
+2. COMPILE ALL THE FILES VIA `javac *.java`
+3. START THE ROUTER VIA `java Router` (case sensitive)
+4. OPEN A NEW TERMINAL WINDOW, MAKE SURE YOU ARE IN THE PROJECT DIRECTORY, START A CLIENT VIA `java Client [hostname]` where [hostname] is the you wish to give this particular client. E.G. `java Client Alice` or `java Client Bob`.
    5. FOR EACH NEW CLIENT, REPEAT STEP 4.
 
 
